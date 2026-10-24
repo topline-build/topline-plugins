@@ -1,0 +1,19 @@
+{
+  "name": "topline",
+  "displayName": "Topline",
+  "version": "0.2.0",
+  "description": "Build and deploy Topline apps, and use your workspaces, chats and company knowledge.",
+  "author": {
+    "name": "Topline",
+    "url": "https://topline.build"
+  },
+  "homepage": "https://topline.build",
+  "userConfig": {
+    "topline_url": {
+      "type": "string",
+      "title": "Topline address",
+      "required": true,
+      "description": "Your Topline account address, for example https://acme.topline.build. It is in Developer Access."
+    }
+  }
+}

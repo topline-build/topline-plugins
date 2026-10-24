@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "topline": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/scripts/topline-mcp.cjs"
+      ],
+      "env": {
+        "TOPLINE_API_URL": "${user_config.topline_url}",
+        "TOPLINE_MCP_SURFACE": "topline",
+        "TOPLINE_MCP_PROTOCOL_VERSION": "2025-11-25"
+      }
+    }
+  }
+}
