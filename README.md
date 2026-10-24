@@ -9,7 +9,7 @@ claude plugin install topline@topline --config topline_url=https://<your-account
 
 Or in a session: `/plugin marketplace add topline-build/topline-plugins`, then install `topline` from `/plugin` and enter your Topline address when asked. Your address is in Topline Developer Access.
 
-Node.js and npm are required. Then sign in once: run `npx -y @topline-build/harness-mcp@0.9.1 login --url https://<your-account>.topline.build`. Your browser opens; choose Allow.
+Node.js and npm are required. Start a new Claude Code session: your browser opens to sign in to Topline, and the Topline tools load after you choose Allow. On a computer with no browser, open the address the Topline server prints.
 
 Turn on auto-update for this marketplace in `/plugin` > Marketplaces to get new versions.
 

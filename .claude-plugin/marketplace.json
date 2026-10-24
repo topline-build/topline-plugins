@@ -12,7 +12,7 @@
       "name": "topline",
       "source": "./plugins/topline",
       "description": "Build and deploy Topline apps, and use your workspaces, chats and company knowledge.",
-      "version": "0.2.0"
+      "version": "0.3.0"
     }
   ]
 }
