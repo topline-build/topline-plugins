@@ -15,5 +15,6 @@
       "required": true,
       "description": "Your Topline account address, for example https://acme.topline.build. It is in Developer Access."
     }
-  }
+  },
+  "license": "MIT"
 }
