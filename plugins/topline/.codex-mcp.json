@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "topline": {
+      "command": "node",
+      "args": [
+        "-e",
+        "const { spawn } = require(\"node:child_process\");\nconst args = [\"-y\",\"@topline-build/harness-mcp@0.9.2\"];\nconst env = { ...process.env, TOPLINE_WORKSPACE_ROOT: process.env.TOPLINE_WORKSPACE_ROOT || process.env.CLAUDE_PROJECT_DIR || process.cwd() };\nif (!env.TOPLINE_API_URL || env.TOPLINE_API_URL.includes(\"${\")) {\n  delete env.TOPLINE_API_URL;\n  try {\n    const fs = require(\"node:fs\"), path = require(\"node:path\"), os = require(\"node:os\");\n    const dir = path.join(os.homedir(), \".topline\", \"build-mcp\");\n    const signedIn = fs.readdirSync(dir).filter(name => name.endsWith(\".json\")).map(name => {\n      try { const file = path.join(dir, name), saved = JSON.parse(fs.readFileSync(file, \"utf8\"));\n        return typeof saved.issuer === \"string\" && /^https:\\/\\/[^/]+$/.test(saved.issuer) && saved.resource === `${saved.issuer}/mcp/topline`\n          ? { issuer: saved.issuer, at: fs.statSync(file).mtimeMs } : null; } catch { return null; }\n    }).filter(Boolean).sort((a, b) => b.at - a.at);\n    if (signedIn[0]) env.TOPLINE_API_URL = signedIn[0].issuer;\n  } catch {}\n  if (!env.TOPLINE_API_URL) { process.stderr.write(\"Topline needs your Topline address. Sign in once, then start a new chat: npx -y @topline-build/harness-mcp@0.9.2 login --url https://<your-account>.topline.build\\n\"); process.exit(1); }\n}\nconst child = process.platform === \"win32\"\n  ? spawn(\"cmd.exe\", [\"/d\", \"/s\", \"/c\", \"npx\", ...args], { stdio: \"inherit\", windowsHide: true, env })\n  : spawn(\"npx\", args, { stdio: \"inherit\", env });\nchild.on(\"error\", () => { process.stderr.write(\"Could not start Topline. Install Node.js and npm.\\n\"); process.exit(1); });\nchild.on(\"exit\", code => process.exit(code ?? 1));\nfor (const signal of [\"SIGINT\", \"SIGTERM\"]) process.on(signal, () => child.kill(signal));"
+      ],
+      "env": {
+        "TOPLINE_MCP_SURFACE": "topline",
+        "TOPLINE_MCP_PROTOCOL_VERSION": "2025-11-25"
+      }
+    }
+  }
+}
