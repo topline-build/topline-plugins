@@ -1,0 +1,27 @@
+{
+  "name": "topline",
+  "version": "0.4.0",
+  "description": "Build and deploy Topline apps, and use your workspaces, chats and company knowledge.",
+  "author": {
+    "name": "Topline",
+    "url": "https://topline.build"
+  },
+  "skills": "./skills/",
+  "mcpServers": "./.codex-mcp.json",
+  "interface": {
+    "displayName": "Topline",
+    "shortDescription": "Build and deploy Topline apps, and use your workspaces, chats and company knowledge.",
+    "longDescription": "Build and deploy Topline apps, and use your workspaces, chats and company knowledge.",
+    "developerName": "Topline",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://topline.build",
+    "defaultPrompt": [
+      "Find the Topline workspace context for my task.",
+      "Inspect my local app before deploying a private draft."
+    ]
+  }
+}

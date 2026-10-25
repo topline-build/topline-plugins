@@ -5,14 +5,14 @@
     "url": "https://topline.build"
   },
   "metadata": {
-    "description": "Topline for Claude Code."
+    "description": "Topline for Claude Code and Codex."
   },
   "plugins": [
     {
       "name": "topline",
       "source": "./plugins/topline",
       "description": "Build and deploy Topline apps, and use your workspaces, chats and company knowledge.",
-      "version": "0.3.0"
+      "version": "0.4.0"
     }
   ]
 }
