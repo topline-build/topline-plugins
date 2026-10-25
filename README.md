@@ -23,6 +23,6 @@ codex plugin add topline@topline
 npx -y @topline-build/harness-mcp@0.9.2 login --url https://<your-account>.topline.build
 ```
 
-Codex doesn't ask for an address when it installs a plugin, so sign in once with the last command, using your Topline address from Developer Access. If this computer is signed in to one Topline account, the plugin uses it. To use another, put its address in `~/.topline/account` (the plugin says how when it needs one). Start a new Codex chat afterwards. Run `codex plugin marketplace upgrade` to get new versions.
+Codex doesn't ask for an address when it installs a plugin, so sign in once with the last command, using your Topline address from Developer Access. The plugin uses the address in `~/.topline/account` when that file exists (the Developer Access setup writes it), else the one Topline account this computer is signed in to. When it can't tell which account you mean, it stops and prints the command that picks one. Start a new Codex chat afterwards. Run `codex plugin marketplace upgrade` to get new versions.
 
 This repository is generated from Topline's source. It holds public setup files and skills only: no account addresses, tokens or user content.
