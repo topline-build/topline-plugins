@@ -5,7 +5,7 @@ description: Find, check out, edit, deploy, check, validate, refresh and hand of
 
 # Build a Topline Artifact
 
-Use the named **Topline Build MCP** endpoint consistently and read `tools/list` and `platform_capability_status` before relying on any tool. Use the exposed tool schema for names and parameters; do not guess unsupported parameters. If a tool below is missing or reported `not_configured` or `permission_required`, say so and use the fallback in that step; never work around it.
+Use one Topline MCP server consistently: the `topline` server from the Topline plugin, or a named **Topline Build MCP** connection. Read `tools/list` and `platform_capability_status` before relying on any tool. Use the exposed tool schema for names and parameters; do not guess unsupported parameters. If a tool below is missing or reported `not_configured` or `permission_required`, say so and use the fallback in that step; never work around it.
 
 ## Session flow
 

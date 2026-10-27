@@ -5,7 +5,7 @@ description: Inspect existing Topline Workspace conversations and coding-workfor
 
 # Resume Topline Work
 
-Use the named **Topline Workspace MCP** endpoint consistently. Discover its catalog first if necessary; do not use the legacy Harness union as a substitute.
+Use one Topline MCP server consistently: the `topline` server from the Topline plugin, or a named **Topline Workspace MCP** connection. Discover its catalog first if necessary; do not use the legacy Harness union as a substitute.
 
 ## Inspect before resuming
 
