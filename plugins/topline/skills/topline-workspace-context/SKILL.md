@@ -5,7 +5,7 @@ description: Read scoped Topline Workspace MCP context, conversations, workspace
 
 # Topline Workspace Context
 
-Use the named **Topline Workspace MCP** endpoint consistently; do not infer authority from another endpoint. Start with `tools/list` when the client has not exposed this catalog, and use only its currently advertised read tools and input schema.
+Use one Topline MCP server consistently: the `topline` server from the Topline plugin, or a named **Topline Workspace MCP** connection. Do not infer authority from another endpoint. Start with `tools/list` when the client has not exposed this catalog, and use only its currently advertised read tools and input schema.
 
 ## Read context
 
