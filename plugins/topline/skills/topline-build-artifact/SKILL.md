@@ -26,6 +26,19 @@ Without a session, only drafts you created over MCP and have not been edited in 
 
 Never promote live, delete a draft, widen auth, or create an OAuth connection automatically. `platform_plan_artifact_draft_delete` is inspection only; call deletion only after a separate explicit request, fresh plan, and exact-id confirmation.
 
+## Dev sandbox (pilot)
+
+Use this optional loop only where `platform_capability_status` reports the dev sandbox as available (a pilot). It speeds up step 4 (edit) with a running preview; it never replaces steps 5-7 (inspect, deploy, acceptance checks).
+
+1. After starting the session (step 2), call `platform_start_dev_sandbox` for fast edit/see/check iteration against real tenant data. It returns at once with `sandboxId` and status `starting`; keep working while it starts (a few minutes). A repeated start returns the same sandbox.
+2. Poll `platform_read_dev_sandbox` (with `sandboxId`, or none for the session's current sandbox) until `status` is `running`. Each running read returns a fresh `handoffUrl` unless you pass `previewHandoff: false` (do, while just polling); never share it -- it is single-use and expires in 60 seconds, and the user can reopen a fresh one from the artifact page's **Your preview** link. A `failed` or `stopped` status carries the reason; continue the main flow without a sandbox.
+3. After each edit, save or push the source the normal way first, then call `platform_sync_dev_sandbox` with no `tar` to push the changes. Use an inline `tar` only for a very small change (at most 48 KiB decoded); split a larger one across calls, or sync without `tar`.
+4. To see the change actually render, or probe its state, call `platform_browse_dev_sandbox` with a short script of `goto`/`click`/`fill`/`press`/`waitFor`/`screenshot`/`readText` steps (at most 25 steps and 5 screenshots, one 60-second deadline). Navigation stays confined to the sandbox preview; there is no JavaScript step. This runs against live tenant data -- `click` and `fill` perform the app's real writes -- and is advisory observation only, never a substitute for step 7.
+5. Check progress with `platform_read_artifact_logs` / `platform_run_artifact_smoke` with `target: "sandbox"` and this `sandboxId`. Treat this evidence as advisory only (`environment: "sandbox"`) -- it never substitutes for the trusted draft deploy and smoke in the main flow.
+6. Call `platform_stop_dev_sandbox` when you move on to deploy with the session, or when the user is done iterating; an unstopped sandbox still times out after 15 minutes idle or 4 hours total and refunds its unused reservation pro rata.
+
+If a start is refused with `dev_sandbox_capacity_exhausted` (retry after the returned `retryAfterSeconds`) or `dev_sandbox_budget_exhausted`, tell the user and continue the main flow without a sandbox.
+
 ## Company-domain addresses
 
 Use this optional family only when the compatible helper and server advertise it. It needs explicit domain/address
