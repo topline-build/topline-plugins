@@ -20,7 +20,7 @@ Turn on auto-update for this marketplace in `/plugin` > Marketplaces to get new 
 ```sh
 codex plugin marketplace add topline-build/topline-plugins
 codex plugin add topline@topline
-npx -y @topline-build/harness-mcp@0.9.5 login --url https://<your-account>.topline.build
+npx -y @topline-build/harness-mcp@0.9.6 login --url https://<your-account>.topline.build
 ```
 
 Codex doesn't ask for an address when it installs a plugin, so sign in once with the last command, using your Topline address from Developer Access. The plugin uses the address in `~/.topline/account` when that file exists (the Developer Access setup writes it), else the one Topline account this computer is signed in to. When it can't tell which account you mean, it stops and prints the command that picks one. Start a new Codex chat afterwards. Run `codex plugin marketplace upgrade` to get new versions.
