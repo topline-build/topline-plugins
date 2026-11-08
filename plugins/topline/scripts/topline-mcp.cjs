@@ -1,5 +1,5 @@
 const { spawn } = require("node:child_process");
-const args = ["-y","@topline-build/harness-mcp@0.9.9"];
+const args = ["-y","@topline-build/harness-mcp@0.9.10"];
 const env = { ...process.env, TOPLINE_WORKSPACE_ROOT: process.env.TOPLINE_WORKSPACE_ROOT || process.env.CLAUDE_PROJECT_DIR || process.cwd() };
 const address = String(env.TOPLINE_API_URL || "").trim();
 try { if (address) env.TOPLINE_API_URL = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(address) ? address : `https://${address}`).origin; } catch {}
