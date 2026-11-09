@@ -21,11 +21,11 @@ the browser and sets every `x-platform-*` header itself, so a viewer cannot
 forge them. Read the `x-platform-*` names; the unprefixed `x-viewer-email`,
 `x-tenant-id`, and `x-artifact-access` copies are legacy.
 
-Browser code can ask the platform directly: `GET ./_artifact/me` (see below).
+Browser code can ask the platform directly with `GET` to `_artifact/me` under
+the app's base URL (see below).
 
-The app does not receive a name, picture, role, Auth0 subject, ID token, access
-token, or company name. Do not call Auth0, platform `/api/*` routes, or any
-other identity service to get them.
+Use the proxy headers for server-side identity. For the viewer's display name
+or Auth0 subject, use the browser route below.
 
 ## When the email is present
 
@@ -47,22 +47,39 @@ Support "view as" does not apply inside an app: a Topline staff member using
 ## Browser code: `/_artifact/me`
 
 Every hosted app, static or not, gets a platform route that answers who is
-viewing. Fetch it relatively so draft, live, and version paths all work:
+viewing. From the app's root page, fetch it relatively so draft, live, and
+version paths all reach it (the profile fields below are filled in only on the
+live app's dedicated subdomain):
 
 ```js
 const me = await fetch("./_artifact/me").then((r) => r.json());
-// { signedIn: true, email: "viewer@example.com", access: "shared", tenantId: "..." }
-// { signedIn: false, email: null, access: "public", tenantId: "..." }
+// { signedIn: true, email: "viewer@example.com", displayName: "Example Viewer",
+//   auth0Subject: "auth0|example", access: "shared", tenantId: "..." }
 ```
+
+From a nested page, resolve `_artifact/me` against the app's base URL
+with a trailing slash, such as `new URL("_artifact/me", appBaseUrl)`.
+
+On the live app's dedicated Topline subdomain, Topline looks up the signed-in
+viewer's own record in the app's company.
+`auth0Subject` is the exact Auth0 `sub` saved at sign-in. Either profile field
+can be `null` if the value is missing or the viewer has no active customer
+membership in the company (for example a Topline staff member, or someone
+added to an **Only people added** app from outside the company).
+
+Both profile fields are always `null` on draft and version paths, shared
+addresses (including the company's own subdomain), custom domains, apps
+published with **Anyone with the link**, viewer-token visits, support "view
+as" sessions, and dev sandbox previews.
 
 The platform answers it before the app sees the request, with
 `Cache-Control: no-store`. It accepts only `GET` and `HEAD`. Apps cannot declare
 their own `/_artifact/me` route; paths under it, such as `/_artifact/me/prefs`,
 are still the app's.
 
-On an **Anyone with the link** app it always reports `signedIn: false`, even
-when the visitor happens to be signed in to Topline, so a public page never
-learns a passer-by's email.
+When access comes through **Anyone with the link**, the endpoint reports
+`signedIn: false` and `email: null`. A viewer with direct Topline access to
+the same app can still receive their email.
 
 Use it only to display who is signed in. Anything the browser holds can be
 edited, so never send this email back to your own server as proof of who is
@@ -70,13 +87,13 @@ asking. Server code reads the headers instead.
 
 ## Using it
 
-- **Personalize the page.** Fetch `./_artifact/me` from browser code and show
-  the email or a greeting. Never trust an email the browser sends back in a
-  body, query string, or header.
+- **Personalize the page.** Fetch `./_artifact/me` from browser code and greet
+  the viewer by `me.displayName ?? me.email`. Use the proxy headers for
+  authorization on your server.
 - **Scope data.** Filter server-side by the header email. For the platform
   `customers` binding, use the viewer-scoped binding instead; the platform
   filters it for you.
-- **Roles and display names.** Keep them in a table keyed by
+- **App-specific roles.** Keep them in a table keyed by
   lowercased email (manifest `tables[]`) and look them up server-side. The
   platform does not supply roles.
 - **Writes and audit.** Record the header email as the actor on every write.
