@@ -1,0 +1,47 @@
+{
+  "manifestVersion": 2,
+  "id": "live-operations-dashboard",
+  "title": "Live operations dashboard",
+  "kind": "dashboard",
+  "runtime": {
+    "target": "aws_lambda_function_url",
+    "region": "us-west-2",
+    "entryPoint": "artifactApp"
+  },
+  "build": { "command": "npm run build", "outputDir": "dist" },
+  "validation": {
+    "localCommand": "node src/index.js --test",
+    "testCommand": "node src/index.js --test --artifact-tests-json"
+  },
+  "routes": [
+    { "path": "/", "kind": "page", "handler": "artifactApp" },
+    { "path": "/_artifact/data/operations-by-branch", "kind": "api", "handler": "artifactApp" },
+    { "path": "/_artifact/data/open-work", "kind": "api", "handler": "artifactApp" }
+  ],
+  "sourceBindings": [],
+  "refreshSchedules": [],
+  "datasets": [
+    {
+      "name": "operations-by-branch",
+      "route": "/_artifact/data/operations-by-branch",
+      "mode": "live",
+      "sql": "select b.branch_id as \"branchId\", b.branch_name as \"branchName\", count(*) filter (where w.status = 'open') as \"openWork\", min(w.created_at) filter (where w.status = 'open') as \"oldestOpenAt\", count(*) filter (where w.status = 'completed' and w.completed_at >= now() - interval '7 days') as \"completedLast7Days\", max(w.updated_at) as \"sourceUpdatedAt\" from source_operations.work_orders w join source_operations.branches b on b.branch_id = w.branch_id where w.status = 'open' or (w.status = 'completed' and w.completed_at >= now() - interval '7 days') group by b.branch_id, b.branch_name order by \"openWork\" desc, b.branch_id asc limit 100",
+      "maxRows": 100,
+      "maxBytes": 250000,
+      "timeoutMs": 5000,
+      "cacheTtlSeconds": 60
+    },
+    {
+      "name": "open-work",
+      "route": "/_artifact/data/open-work",
+      "mode": "live",
+      "sql": "select w.work_order_id as \"workOrderId\", b.branch_id as \"branchId\", b.branch_name as \"branchName\", w.priority, w.created_at as \"createdAt\", w.updated_at as \"sourceUpdatedAt\" from source_operations.work_orders w join source_operations.branches b on b.branch_id = w.branch_id where w.status = 'open' order by w.created_at asc, w.work_order_id asc limit 250",
+      "maxRows": 250,
+      "maxBytes": 500000,
+      "timeoutMs": 5000,
+      "cacheTtlSeconds": 60
+    }
+  ],
+  "env": ["ARTIFACT_ID", "ARTIFACT_VERSION_ID", "ARTIFACT_MANIFEST_URI", "PLATFORM_ARTIFACT_ID", "PLATFORM_ARTIFACT_VERSION_ID", "PLATFORM_ARTIFACT_MANIFEST_URI"],
+  "viewerPolicy": "private"
+}

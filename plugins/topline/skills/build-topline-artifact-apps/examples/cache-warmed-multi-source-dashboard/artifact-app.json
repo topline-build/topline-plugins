@@ -1,0 +1,46 @@
+{
+  "manifestVersion": 2,
+  "id": "cache-warmed-multi-source-dashboard",
+  "title": "Cache-warmed multi-source dashboard",
+  "kind": "dashboard",
+  "runtime": {
+    "target": "aws_lambda_function_url",
+    "region": "us-west-2",
+    "entryPoint": "artifactApp"
+  },
+  "build": { "command": "npm run build", "outputDir": "dist" },
+  "validation": {
+    "localCommand": "node src/index.js --test",
+    "testCommand": "node src/index.js --test --artifact-tests-json"
+  },
+  "routes": [
+    { "path": "/", "kind": "page", "handler": "artifactApp" },
+    { "path": "/_artifact/data/branch-service-summary", "kind": "api", "handler": "artifactApp" }
+  ],
+  "sourceBindings": [],
+  "datasets": [
+    {
+      "name": "branch-service-summary",
+      "route": "/_artifact/data/branch-service-summary",
+      "mode": "live",
+      "sql": "select b.branch_name as \"branchName\", count(*) as \"completedVisits\", avg(v.duration_minutes)::numeric(10,1) as \"averageDurationMinutes\" from source_operations.visits v join source_operations.branches b on b.branch_id = v.branch_id where v.completed_at >= now() - interval '7 days' group by b.branch_name order by \"completedVisits\" desc limit 100",
+      "maxRows": 100,
+      "maxBytes": 250000,
+      "timeoutMs": 5000,
+      "cacheTtlSeconds": 300
+    }
+  ],
+  "refreshSchedules": [
+    {
+      "name": "warm-branch-service-summary",
+      "mode": "refresh_live_cache",
+      "cron": "*/5 * * * *",
+      "timezone": "America/Denver",
+      "promptText": "Run warm-artifact-datasets to refresh the existing live dataset cache only. Do not create a source revision, rebuild, redeploy, or modify source files.",
+      "outputStrategy": "silent",
+      "enabled": true
+    }
+  ],
+  "env": ["ARTIFACT_ID", "ARTIFACT_VERSION_ID", "ARTIFACT_MANIFEST_URI", "PLATFORM_ARTIFACT_ID", "PLATFORM_ARTIFACT_VERSION_ID", "PLATFORM_ARTIFACT_MANIFEST_URI"],
+  "viewerPolicy": "private"
+}

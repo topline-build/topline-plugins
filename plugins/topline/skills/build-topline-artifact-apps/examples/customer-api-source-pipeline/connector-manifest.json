@@ -1,0 +1,54 @@
+{
+  "contract": "platform.connector.rest.v1",
+  "name": "acme_service",
+  "baseUrl": "https://api.provider.example",
+  "auth": {
+    "type": "header",
+    "header": "X-API-Key",
+    "secretKey": "token"
+  },
+  "resources": [
+    {
+      "name": "customers",
+      "label": "Customers",
+      "description": "Customer accounts used by reporting and operational dashboards.",
+      "path": "/v1/customers",
+      "recordsPath": "data",
+      "primaryKey": [
+        "id"
+      ],
+      "sourceInsertedAt": "created_at",
+      "sourceUpdatedAt": "updated_at",
+      "syncMode": "incremental",
+      "pagination": {
+        "type": "offset",
+        "offsetParam": "offset",
+        "limitParam": "limit",
+        "pageSize": 100,
+        "totalPath": "meta.total",
+        "maxPages": 20
+      }
+    },
+    {
+      "name": "work_orders",
+      "label": "Work orders",
+      "description": "Work orders used for service, completion, and revenue reporting.",
+      "path": "/v1/work-orders",
+      "recordsPath": "data",
+      "primaryKey": [
+        "id"
+      ],
+      "sourceInsertedAt": "created_at",
+      "sourceUpdatedAt": "updated_at",
+      "syncMode": "incremental",
+      "pagination": {
+        "type": "offset",
+        "offsetParam": "offset",
+        "limitParam": "limit",
+        "pageSize": 100,
+        "totalPath": "meta.total",
+        "maxPages": 20
+      }
+    }
+  ]
+}

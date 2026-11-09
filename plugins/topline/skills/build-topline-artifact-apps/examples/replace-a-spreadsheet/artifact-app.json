@@ -1,0 +1,42 @@
+{
+  "manifestVersion": 2,
+  "id": "replace-a-spreadsheet",
+  "title": "Client tracker",
+  "kind": "table",
+  "runtime": {
+    "target": "aws_lambda_function_url",
+    "region": "us-west-2",
+    "entryPoint": "artifactApp",
+    "language": "node"
+  },
+  "build": { "command": "npm run build", "outputDir": "dist" },
+  "validation": {
+    "localCommand": "node src/index.js --test",
+    "testCommand": "node src/index.js --test --artifact-tests-json"
+  },
+  "routes": [
+    { "path": "/", "kind": "page", "handler": "artifactApp" },
+    { "path": "/_artifact/data/client-status-summary", "kind": "api", "handler": "artifactApp" }
+  ],
+  "sourceBindings": [],
+  "datasets": [
+    {
+      "name": "client-status-summary",
+      "route": "/_artifact/data/client-status-summary",
+      "mode": "live",
+      "sql": "select status, count(*) as clients from company_data.clients where _deleted_at is null group by status",
+      "cacheTtlSeconds": 60
+    }
+  ],
+  "tables": [
+    {
+      "alias": "clients",
+      "table": "Clients",
+      "operations": ["list", "get", "insert", "update", "delete", "restore"],
+      "readableColumns": ["name", "portal_url", "notes", "status"],
+      "writableColumns": ["name", "portal_url", "notes", "status"]
+    }
+  ],
+  "env": ["ARTIFACT_ID", "ARTIFACT_VERSION_ID", "ARTIFACT_MANIFEST_URI", "PLATFORM_ARTIFACT_ID", "PLATFORM_ARTIFACT_VERSION_ID", "PLATFORM_ARTIFACT_MANIFEST_URI"],
+  "viewerPolicy": "private"
+}

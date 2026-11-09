@@ -1,0 +1,51 @@
+{
+  "manifestVersion": 2,
+  "id": "precomputed-s3-report",
+  "title": "Precomputed service report",
+  "kind": "dashboard",
+  "runtime": {
+    "target": "aws_lambda_function_url",
+    "region": "us-west-2",
+    "entryPoint": "artifactApp"
+  },
+  "build": { "command": "npm run build", "outputDir": "dist" },
+  "validation": {
+    "localCommand": "node src/index.js --test",
+    "testCommand": "node src/index.js --test --artifact-tests-json"
+  },
+  "routes": [
+    { "path": "/", "kind": "page", "handler": "artifactApp" },
+    { "path": "/_artifact/data/service-performance-report", "kind": "api", "handler": "artifactApp" }
+  ],
+  "sourceBindings": [],
+  "datasets": [
+    {
+      "name": "service-performance-report",
+      "route": "/_artifact/data/service-performance-report",
+      "mode": "precomputed",
+      "paramsSchema": {
+        "type": "object",
+        "properties": { "windowDays": { "type": "integer", "enum": [30, 90] } },
+        "required": ["windowDays"]
+      },
+      "warmParams": [{ "windowDays": 30 }, { "windowDays": 90 }],
+      "sql": "select b.branch_id as \"branchId\", b.branch_name as \"branchName\", date_trunc('week', v.completed_at)::date as week, count(*) as \"completedVisits\", avg(v.duration_minutes)::numeric(10,1) as \"averageDurationMinutes\", max(v.updated_at) as \"sourceUpdatedAt\" from source_operations.visits v join source_operations.branches b on b.branch_id = v.branch_id where v.completed_at >= now() - (:windowDays * interval '1 day') group by b.branch_id, b.branch_name, date_trunc('week', v.completed_at)::date order by week desc, \"completedVisits\" desc, b.branch_id asc",
+      "maxRows": 5000,
+      "maxBytes": 5000000,
+      "timeoutMs": 60000
+    }
+  ],
+  "refreshSchedules": [
+    {
+      "name": "refresh-service-performance-report",
+      "mode": "refresh_live_cache",
+      "cron": "15 */4 * * *",
+      "timezone": "America/Denver",
+      "promptText": "Run warm-artifact-datasets for each declared warmParams variant and refresh the private tenant-scoped precomputed JSON. Do not create a source revision, rebuild, redeploy, or modify source files.",
+      "outputStrategy": "silent",
+      "enabled": true
+    }
+  ],
+  "env": ["ARTIFACT_ID", "ARTIFACT_VERSION_ID", "ARTIFACT_MANIFEST_URI", "PLATFORM_ARTIFACT_ID", "PLATFORM_ARTIFACT_VERSION_ID", "PLATFORM_ARTIFACT_MANIFEST_URI"],
+  "viewerPolicy": "private"
+}
