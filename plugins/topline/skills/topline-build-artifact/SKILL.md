@@ -7,6 +7,8 @@ description: Find, check out, edit, deploy, check, validate, refresh and hand of
 
 Use one Topline MCP server consistently: the `topline` server from the Topline plugin, or a named **Topline Build MCP** connection. Read `tools/list` and `platform_capability_status` before relying on any tool. Use the exposed tool schema for names and parameters; do not guess unsupported parameters. If a tool below is missing or reported `not_configured` or `permission_required`, say so and use the fallback in that step; never work around it.
 
+This skill is the session lifecycle. For what to build (the artifact-app contract, templates, `serverTables` and the `x-platform-tables-sql-url` header, managed storage, `/_artifact/me`, datasets and the worked examples a starter's `pluginPath` names), read the `build-topline-artifact-apps` skill that ships beside it.
+
 ## Session flow
 
 1. **Find the app.** `platform_list_artifact_apps` lists the apps you created or that were shared with you to edit, with `latestVersionId`, whether source is available, draft or live state, and whether an in-app task is working. Use `platform_list_build_workspaces` for placement of a new app. Reuse exact IDs; do not guess a workspace or artifact. If an in-app task is working, wait or ask the user; do not start a session over it.

@@ -1,0 +1,36 @@
+{
+  "manifestVersion": 2,
+  "id": "materialized-sql-data-product",
+  "title": "Materialized service health dashboard",
+  "kind": "dashboard",
+  "runtime": {
+    "target": "aws_lambda_function_url",
+    "region": "us-west-2",
+    "entryPoint": "artifactApp"
+  },
+  "build": { "command": "npm run build", "outputDir": "dist" },
+  "validation": {
+    "localCommand": "node src/index.js --test",
+    "testCommand": "node src/index.js --test --artifact-tests-json"
+  },
+  "routes": [
+    { "path": "/", "kind": "page", "handler": "artifactApp" },
+    { "path": "/_artifact/data/service-health", "kind": "api", "handler": "artifactApp" }
+  ],
+  "sourceBindings": [],
+  "refreshSchedules": [],
+  "datasets": [
+    {
+      "name": "service-health",
+      "route": "/_artifact/data/service-health",
+      "mode": "live",
+      "sql": "select branch_id as \"branchId\", branch_name as \"branchName\", report_date as \"reportDate\", eligible_visit_count as \"eligibleVisitCount\", completed_visit_count as \"completedVisitCount\", total_duration_minutes as \"totalDurationMinutes\", duration_observation_count as \"durationObservationCount\", open_work_count as \"openWorkCount\", source_updated_at as \"sourceUpdatedAt\" from analytics.service_health_daily_v1 where report_date >= current_date - interval '30 days' order by report_date desc, branch_id asc",
+      "maxRows": 1000,
+      "maxBytes": 1000000,
+      "timeoutMs": 5000,
+      "cacheTtlSeconds": 300
+    }
+  ],
+  "env": ["ARTIFACT_ID", "ARTIFACT_VERSION_ID", "ARTIFACT_MANIFEST_URI", "PLATFORM_ARTIFACT_ID", "PLATFORM_ARTIFACT_VERSION_ID", "PLATFORM_ARTIFACT_MANIFEST_URI"],
+  "viewerPolicy": "private"
+}

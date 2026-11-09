@@ -1,0 +1,34 @@
+{
+  "manifestVersion": 2,
+  "id": "internal-action-tool",
+  "title": "Internal action tool",
+  "kind": "tool",
+  "runtime": {
+    "target": "aws_lambda_function_url",
+    "region": "us-west-2",
+    "entryPoint": "artifactApp",
+    "language": "node"
+  },
+  "build": {
+    "command": "node src/index.js --build",
+    "outputDir": "dist"
+  },
+  "validation": {
+    "localCommand": "node src/index.js --test",
+    "testCommand": "node src/index.js --test --artifact-tests-json"
+  },
+  "routes": [
+    { "path": "/", "kind": "page", "handler": "artifactApp" },
+    { "path": "/_artifact/api/actions/approve", "kind": "api", "handler": "artifactApp" }
+  ],
+  "sourceBindings": [],
+  "secretBindings": [
+    {
+      "name": "approvalApiToken",
+      "env": "APPROVAL_API_TOKEN_SECRET_ARN",
+      "secretArn": "arn:aws:secretsmanager:us-west-2:123456789012:secret:example/approval-api-token-PLACEHOLDER"
+    }
+  ],
+  "env": ["ARTIFACT_ID", "ARTIFACT_VERSION_ID", "ARTIFACT_MANIFEST_URI", "PLATFORM_ARTIFACT_ID", "PLATFORM_ARTIFACT_VERSION_ID", "PLATFORM_ARTIFACT_MANIFEST_URI", "APPROVAL_API_TOKEN_SECRET_ARN"],
+  "viewerPolicy": "private"
+}

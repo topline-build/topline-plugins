@@ -1,0 +1,29 @@
+{
+  "manifestVersion": 2,
+  "id": "private-api-first-app",
+  "title": "Private API-first app",
+  "kind": "tool",
+  "runtime": {
+    "target": "aws_lambda_function_url",
+    "region": "us-west-2",
+    "entryPoint": "src.app:app",
+    "language": "python"
+  },
+  "build": {
+    "command": "python3 -m pip install --upgrade -r requirements.txt -t .python && npm ci --ignore-scripts --no-audit --no-fund && npm run build",
+    "outputDir": "dist"
+  },
+  "validation": {
+    "localCommand": "python3 src/check.py",
+    "testCommand": "python3 src/check.py --artifact-tests-json"
+  },
+  "routes": [
+    { "path": "/", "kind": "page", "handler": "src.app:app" },
+    { "path": "/_artifact/api/health", "kind": "api", "handler": "src.app:app" },
+    { "path": "/_artifact/api/openapi.json", "kind": "api", "handler": "src.app:app" },
+    { "path": "/_artifact/api/validate-service-window", "kind": "api", "handler": "src.app:app" }
+  ],
+  "sourceBindings": [],
+  "env": ["ARTIFACT_ID", "ARTIFACT_VERSION_ID", "ARTIFACT_MANIFEST_URI", "PLATFORM_ARTIFACT_ID", "PLATFORM_ARTIFACT_VERSION_ID", "PLATFORM_ARTIFACT_MANIFEST_URI"],
+  "viewerPolicy": "private"
+}
