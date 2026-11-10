@@ -10,7 +10,9 @@ visual surface.
 
 1. Use the task-provided Storybook MCP. Call `list-all-documentation`, then open
    the brand guidance and the closest relevant component or page stories with
-   `get-documentation` or `get-documentation-for-story`.
+   `get-documentation` or `get-documentation-for-story`. From Claude Code or
+   Codex on the Topline MCP, use `platform_storybook` with `action` `list`,
+   `docs` (several IDs per call) and `preview` instead.
 2. Read the human-authored brand guidance as design intent. Inspect rendered
    stories for concrete evidence of hierarchy, density, typography, color,
    spacing, shape, imagery, interaction, and voice.
