@@ -10,7 +10,7 @@ Build dashboards that help a specific person notice, decide, and act. Favor a qu
 ## Start with the project
 
 1. Establish the deliverable: design proposal, working UI, or review. Read repository instructions and inspect the existing application when modifying it.
-2. Use the project's design system. If Storybook MCP is available, call `list-all-documentation`, then `get-documentation` or `get-documentation-for-story` before reading component source. Treat the customer's published brand description and rendered stories as design input, not merely component documentation.
+2. Use the project's design system. If Storybook MCP is available, call `list-all-documentation`, then `get-documentation` or `get-documentation-for-story` before reading component source. From Claude Code or Codex on the Topline MCP, the same reads are `platform_storybook` with `action` `list`, `docs` and `preview` (see the topline-design-system-storybook skill). Treat the customer's published brand description and rendered stories as design input, not merely component documentation.
 3. Inspect nearby screens and matching stories. Preserve established interaction and visual language unless the task explicitly calls for a redesign.
 4. Live interfaces use connected data and verified metric definitions; never invent runtime fallback metrics or unsupported business meaning. Design proposals and stories may use clearly labeled synthetic fixtures. Keep their totals and comparisons consistent, and do not present them as customer facts.
 
