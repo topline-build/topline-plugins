@@ -12,6 +12,7 @@ repository root: `node scripts/artifacts/validate-local --dir <appDir>`.
 | Private operational action surface | `internal-tool` | Keep private UI and any server work scoped to declared artifact routes. |
 | Records people add or edit | `table-editor` | Manifest `tables[]` over tables; saves work only on the live app. See `examples/replace-a-spreadsheet/EXAMPLE.md`. |
 | Private API-first tool | `python-api` | Declare `/_artifact/api/*`; keep viewer auth and external calls server-side. |
+| Page that only reads platform routes, with no backend of its own | Static-only `parts` | One `static` part and no server part; no machine runs for it. See "One app, several parts". |
 | Website or app with its own backend API (two parts, possibly two languages) | `web-and-api` | One artifact with `parts`: a static website part and a server API part, routed by path under one address. |
 | MCP server exposed to Topline chat or Topline Coding Agent tasks | `fastmcp-server` | Exact FastMCP 3.4.7 lock, stateless JSON Streamable HTTP at `/_artifact/mcp`; connect and review after live promotion in Developer Access. |
 | External webhook receiver | Platform service | Current artifact routing does not expose provider-verifiable machine ingress. |
@@ -37,8 +38,15 @@ backend, or code in two languages. Declare `parts` in the manifest:
 - Use relative asset URLs (`./app.js`) and hash routes (`#/reports`) so the
   same files work on the draft, live, and version addresses.
 
-Up to four parts; at least one must be a server part. `mcp_server` apps stay
-single-part.
+Up to four parts. `mcp_server` apps stay single-part.
+
+An app can be **static parts only**: built files with no server of its own.
+It deploys no machine, so it suits a page that only reads platform routes
+(`/_artifact/data/*`, `/_artifact/tables/*`, `/_artifact/pipeline/*`,
+`/_artifact/me`). A static-only app can't declare API routes, `serverTables`,
+`previewWrites`, `secretWrites`, `secretBindings` or `storageBindings`; add a
+server part when it needs any of them. Paths that match no file get 404, or
+`index.html` for page navigations when `spa: true`.
 
 ## Data-pattern decision
 
