@@ -133,16 +133,13 @@ before invoking `start_data_source_build`.
    and relationships. Call `approve_data_source_tables` and wait for explicit
    approval before runtime generation.
 5. Adapt `connector-manifest.json` to the verified API. The manifest's
-   `secretKey` must exactly match the connection secret slot. From the repository
-   root, run:
-
-   ```powershell
-   npm run connector:verify -w @platform/server -- <path-to-connector-manifest.json>
-   ```
-
-   Supply a local verification secret through the verifier's documented
-   `CONNECTOR_*` environment mapping. The verifier prints schema evidence, not
-   source rows. A syntactically valid placeholder manifest is not live proof.
+   `secretKey` must exactly match the connection secret slot. Call
+   `start_pipeline_runtime_build` with the `buildId`, the manifest, and
+   `verifyOnly: true`. Topline runs it against the live API with the credential
+   stored on the connection and returns evidence (row counts, field types,
+   timestamp coverage, and an incremental filter probe) plus warnings, never
+   source rows. It saves nothing. Fix the warnings and repeat until it is clean.
+   A syntactically valid placeholder manifest is not live proof.
 6. Call `start_pipeline_runtime_build` with the approved `buildId` and verified
    manifest. The platform writes the contract to the source connection, keeps
    existing checkpoints only when the manifest is unchanged, and selects the
