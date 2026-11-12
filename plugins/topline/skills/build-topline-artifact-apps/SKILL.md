@@ -73,6 +73,16 @@ Read [Validation and lifecycle](references/validation-and-lifecycle.md) before t
 8. Prepare validation, request review, and stop on escalation or unavailable reviewer infrastructure.
 9. Leave live promotion to the operator.
 
+### Charts the reviewer can check
+
+App validation reads only the page's visible text, not the pixels of a canvas or SVG. A chart counts only when the page shows, as visible text:
+
+- its title or caption;
+- the name of each bar, slice, point or series; and
+- each value, on or beside its mark, or in a small data table next to the chart.
+
+A chart with no text, text only in a tooltip, in `aria-hidden` markup or in an image, or with just a caption, can't be checked, and review asks for labels and values. Follow `design-dashboard-interfaces` (`references/chart-system-and-quality.md`) for the chart itself.
+
 ## Keep the contract maintainable
 
 - Prefer one clear pattern over speculative flexibility.
