@@ -91,6 +91,41 @@ connection check before reviewing or enabling tools. A successful local or
 draft smoke is not evidence that the live broker credential, deployed route, or
 tool grant works.
 
+## What the reviewer can check
+
+The validation reviewer checks each brief requirement against the page's
+rendered text as it first loads, plus the captured console errors and failed
+requests. It cannot click, scroll past its reading limit, or read numbers off
+a picture. Build the page so every requirement is visible in that text:
+
+- Show required content on load, not behind a button, tab or disclosure, and
+  within the first 16,000 characters of page text.
+- Use quoted brief wording word for word. A required heading such as
+  "How to read this board" must appear exactly; a reworded heading does not
+  count.
+- A required section needs its own heading and content. The page title or
+  subtitle does not count as a section.
+- Every request the page makes must succeed. A console error or failed request
+  is a needs_fix even when the visible content is complete.
+
+### Charts the reviewer can check
+
+A chart is drawn, so the reviewer can only check it through the text around it.
+For every chart a brief asks for:
+
+- Give it a visible title or caption that says what it compares (for example
+  "Open jobs by office").
+- Label each bar, point or series with its name and value as visible text (for
+  example "North 42"), or put a small data table with the same values next to
+  it.
+- Do not hide the chart's text from the page with `aria-hidden`, and do not
+  rely on color, tooltips or hover to carry a required value.
+
+A chart with no text fails review, and a caption alone does not show the values
+it compares. For chart design beyond this (scales, comparisons, palette,
+contrast, missing data), read the chart system reference in the
+`design-dashboard-interfaces` skill.
+
 Only an operator may promote a reviewed draft. A deployment state may move
 through `not_deployed`, `deploying`, `deployed`, `deploy_failed`,
 `validation_failed`, `promoted`, or `rolled_back`; do not call `deployed` or
