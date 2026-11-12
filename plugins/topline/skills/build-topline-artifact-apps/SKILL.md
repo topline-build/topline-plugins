@@ -70,7 +70,7 @@ Read [Validation and lifecycle](references/validation-and-lifecycle.md) before t
    When a tool returns `resourceAdvice`, the app ran out of memory, time, or disk: apply the suggested `resources` value and redeploy (at most twice per problem), otherwise change the code. Never ask the user about machine size. If an open problem says Topline raised the live app's size, carry that value into the manifest. See "Machine size and resource failures" in the validation reference.
 6. Run rendered smoke and fix loading, browser, dataset, auth, overflow, and fallback-data failures.
 7. Compare displayed headline values with bounded direct control queries.
-8. Prepare validation, request review, and stop on escalation or unavailable reviewer infrastructure.
+8. Prepare validation, request review, and stop on escalation or unavailable reviewer infrastructure. The reviewer reads the page's text as it first loads; build every brief requirement, including charts, so it shows there (see "What the reviewer can check" in the validation reference).
 9. Leave live promotion to the operator.
 
 ## Keep the contract maintainable
