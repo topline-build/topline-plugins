@@ -119,6 +119,11 @@ write, along with `Content-Type: application/json` (a write without it gets
 - **Add**: `POST` the table URL with a JSON object of the new row's
   writable columns, such as `{ "name": "Acme" }` (no `values` wrapper; only
   an inline edit nests them); a success returns 201 with the created row.
+- **Value formats**: `bigint` and `numeric` cells are sent and returned as
+  strings, so no digits are lost in JavaScript; a `uuid` is a lowercase
+  string; a `jsonb` cell is the JSON value itself (an object, array, number,
+  boolean or string) and comes back parsed. A `jsonb` column can't be sorted
+  or filtered (`column_not_sortable`, `column_not_filterable`).
 - **Soft delete**: `DELETE` the row URL with `?expectedVersion=<n>`. Deletes
   are soft: the row keeps existing with `_deleted_at` set, and a write to an
   already-deleted row gets 409 `row_deleted` with the current `row` — tell
