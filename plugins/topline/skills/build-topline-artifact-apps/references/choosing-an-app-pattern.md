@@ -2,7 +2,8 @@
 
 Start with the smallest blessed template that matches the delivery shape; copy
 it, then change the manifest and source. Run local validation from the
-repository root: `node scripts/artifacts/validate-local --dir <appDir>`.
+repository root: `node scripts/artifacts/validate-local --dir <appDir>`. With
+the Build MCP, use the matching starter from [Build MCP starters](#build-mcp-starters).
 
 | Situation | Start from | Data approach |
 | --- | --- | --- |
@@ -21,6 +22,31 @@ repository root: `node scripts/artifacts/validate-local --dir <appDir>`.
 | Change which tables a connector syncs or when | Data pipeline artifact | Edit the `pipelineManifest` as a draft; a person publishes. See `examples/data-pipeline-artifact/EXAMPLE.md`. |
 | Exact narrow count aggregate | `live-aggregate-dashboard` | `service_aggregate` binding with `aggregate.type: "count"` only. |
 | A customer viewing only their own customer row | `viewer-scoped-dashboard` | Viewer binding with required session and `customers.email` filter. |
+
+## Build MCP starters
+
+The templates above live in the Topline source tree, which a Topline coding
+task has and a Build MCP client (the Topline plugin in Codex, Claude Code or
+Cursor) does not. With the Build MCP, scaffold with `platform_init_artifact_app`
+instead, and read the recipe its `pluginPath` names:
+
+| Template | Build MCP starting point |
+| --- | --- |
+| `table-editor` (requests, approvals, workflows) | `starter: "table-approvals-app"`: server-only table SQL, a form, "my requests", an approver queue and an approvers table; no `tables[]` |
+| `table-editor` (a plain shared list people edit) | No starter yet: start without one and build the page over `tables[]` from [Replace a spreadsheet](../examples/replace-a-spreadsheet/EXAMPLE.md) |
+| `multi-source-dashboard`, `react-dashboard` | `live-operations-dashboard`, `materialized-sql-data-product` or `precomputed-s3-report` (dependency-free JavaScript). There is no React starter yet: to use the customer's published React components, bundle them yourself and declare `react`, `react-dom` and your bundler in `package.json` dependencies |
+| Cached dashboard warmed on a schedule | `cache-warmed-multi-source-dashboard` needs the Redis live cache: use it only when `platform_capability_status` does not report `families.redis` as `not_supported`; otherwise use `precomputed-s3-report` |
+| `internal-tool` | `internal-action-tool` |
+| `python-api` | `private-api-first-app` or `bounded-bedrock-assistant` scaffold Node; for Python, add a Python server part yourself (see [Server runtime recipes](server-runtime-recipes.md#python-server-parts)) |
+| `viewer-scoped-dashboard` | `viewer-scoped-customer-portal` |
+| `web-and-api` | `shape: "web-and-api"` (no starter) |
+| `artifact-draft` | No starter |
+
+A starter is available only when the tool's `starter` list names it; on an
+older Build MCP helper without `table-approvals-app`, start without a starter
+and copy the helper from [Server runtime recipes](server-runtime-recipes.md).
+Run `npm test` in the app dir and `platform_inspect_artifact_app` instead of
+`validate-local`.
 
 ## One app, several parts
 

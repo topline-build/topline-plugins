@@ -5,23 +5,28 @@ It is not a live release: promotion is an operator action.
 
 ## Exact artifact-app sequence
 
-1. Read operator instructions and inspect the approved data/tool surface.
-2. Build or change the artifact app source from a blessed template.
-3. Run local validation from the repository root and correct package/manifest
-   failures.
-4. Commit the artifact manifest/version with `commit_artifact`.
-5. In AgentCore, run `topline-agent-source-sync`.
-6. Call `sync_artifact_app_source` with the printed source archive.
-7. Call `deploy_artifact_app_draft` using the committed artifact/version and
-   app directory; if it is in flight, poll `artifact_app_deployment_status`.
-8. Call `run_artifact_app_smoke` against that draft.
-9. Call `prepare_artifact_app_validation` to assemble validation evidence.
-10. Call `request_validation` and leave the validated draft for operator
-    review/promotion.
+The steps are the same everywhere; the tool names depend on where you run.
+Use the column for your surface, and check `tools/list` before relying on a
+tool. If an expected tool is absent, stop with its exact name and the blocker.
 
-Do not skip source sync, treat a build as a deploy, smoke an ambiguous version,
-or use direct cloud commands. If an expected bridge tool is absent, stop with
-the exact tool name and the blocker.
+| Step | Build MCP (Topline plugin, Codex, Claude Code, Cursor) | Topline coding task (bridge tools) |
+| --- | --- | --- |
+| 1. Find or start | `platform_capability_status`, `platform_list_artifact_apps`, then `platform_start_build_session` (save `sessionId`, `artifactVersionId`, `sourceHash`); `platform_checkout_artifact_app` for an existing app | Read operator instructions and the approved data/tool surface |
+| 2. Source | `platform_init_artifact_app` (optionally with a `starter`) for a new app, or edit the checkout | Copy a template from `scripts/artifacts/templates/` |
+| 3. Local checks | `npm test` in the app dir, then `platform_inspect_artifact_app`; fix every `problems` entry and keep its bundle SHA-256 | `node scripts/artifacts/validate-local --dir <appDir>` from the repository root |
+| 4. Save and deploy the draft | `platform_deploy_artifact_app` with `sessionId`, `artifactVersionId`, `inspectedSourceHash` and `expectedBundleSha256`; then `platform_wait_artifact_deploy` or `platform_deploy_operation` | `commit_artifact`, then `topline-agent-source-sync` and `sync_artifact_app_source` with the printed archive, then `deploy_artifact_app_draft`; poll `artifact_app_deployment_status` until it settles |
+| 5. Data (precomputed or cached datasets) | `platform_refresh_artifact_data` | `create_artifact_refresh_schedule` with `refreshNow: true` |
+| 6. Smoke and checks | `platform_run_acceptance_checks` (and `platform_run_artifact_smoke` when asked); `platform_read_artifact_logs` for failures | `run_artifact_app_smoke`; `artifact_app_logs` for failures |
+| 7. Review | `platform_prepare_artifact_validation`, `platform_request_artifact_validation`, then poll `platform_artifact_validation_status` | `prepare_artifact_app_validation`, then `request_validation` |
+| 8. Hand off | `platform_open_artifact`, then `platform_close_build_session` | Leave the validated draft for operator review |
+
+A deploy that is still building is not a platform blocker: wait on the same
+operation (each wait call is bounded), and never start a second deploy to
+retry an unknown state. Each committed deploy moves a build session to a new
+`artifactVersionId`; use the new one next.
+
+Do not skip source sync or inspect, treat a build as a deploy, smoke an
+ambiguous version, or use direct cloud commands.
 
 ## Machine size and resource failures
 
@@ -42,8 +47,10 @@ and a 1 vCPU / 2 GB build with up to 60 minutes.
 
 - Leave `resources` out until something actually runs out. Do not ask the user
   about memory or time.
-- When `deploy_artifact_app_draft`, `run_artifact_app_smoke`, or
-  `artifact_app_logs` returns `resourceAdvice` with a `suggested` value, set
+- When a deploy, smoke or log read (`platform_deploy_artifact_app`,
+  `platform_run_artifact_smoke`, `platform_read_artifact_logs`, or in a coding
+  task `deploy_artifact_app_draft`, `run_artifact_app_smoke`,
+  `artifact_app_logs`) returns `resourceAdvice` with a `suggested` value, set
   that field in `artifact-app.json`, commit, redeploy the draft, and smoke it
   again. Do this at most twice for the same problem.
 - When `resourceAdvice.atCeiling` is true, or the problem keeps coming back,
@@ -72,7 +79,7 @@ and a 1 vCPU / 2 GB build with up to 60 minutes.
 | Draft deployment | The committed version reached a draft runtime. | The UI works or data is valid. |
 | Smoke | The draft's critical route/UI behavior is reachable. | User acceptance, required-check satisfaction, or live publication. |
 | Data validation | Bounded source queries and visible metrics match the intended data contract. | Operator approval. |
-| `request_validation` | Evidence is available for review. | Promotion. |
+| Review request (`platform_request_artifact_validation` or `request_validation`) | Evidence is available for review. | Promotion. |
 
 For dashboard work, validate an all-data view and a representative scoped view
 against direct bounded read-only SQL, including metric definitions and freshness

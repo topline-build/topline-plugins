@@ -12,7 +12,7 @@ For an open tab, poll at the requested five-minute cadence while visible using `
 
 ## Warming and failure behavior
 
-The manifest-owned `refresh_live_cache` schedule calls `warm-artifact-datasets` without creating a source revision. Warming is best effort, not a freshness guarantee. Before enabling it, verify Redis is configured, the serialized result fits the Redis value limit, and the exact cold query fits 5 seconds.
+The manifest-owned `refresh_live_cache` schedule calls `warm-artifact-datasets` without creating a source revision. Warming is best effort, not a freshness guarantee. Before enabling it, verify Redis is configured (with the Build MCP, `platform_capability_status` must not report `families.redis` as `not_supported`; where it does, build the `precomputed-s3-report` shape instead), the serialized result fits the Redis value limit, and the exact cold query fits 5 seconds.
 
 The UI cannot see task-level warm failures. It should mark `generatedAt` stale after the agreed threshold and continue to expose live-route errors. Operators inspect schedule/task status for `redis_unconfigured`, value-too-large, or query failures. Do not claim an explicit UI refresh-failure signal.
 

@@ -16,7 +16,7 @@ Render `truncated` as partial data and require narrower scope. Validate that int
 
 `mode: "precomputed"` requires an enabled `refresh_live_cache` schedule. `warmParams` covers both allowed parameter variants. The schedule only recomputes stored dataset JSON; it does not create a source revision, rebuild, redeploy, or use `precompute_static`.
 
-After a new or changed dataset, commit it and request `refreshNow: true` so both variants exist before smoke. Do not retry through a slow live query or embed tenant rows in the bundle.
+After a new or changed dataset, commit it and request `refreshNow: true` (Build MCP: `platform_refresh_artifact_data`) so both variants exist before smoke. Do not retry through a slow live query or embed tenant rows in the bundle.
 
 ## Validation and controls
 

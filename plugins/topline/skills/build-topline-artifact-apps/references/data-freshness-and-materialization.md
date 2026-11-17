@@ -17,8 +17,12 @@ it ready.
 `mode: "precomputed"` requires an enabled `refresh_live_cache` schedule and
 `warmParams` for every declared variant. The same schedule mode may warm a live
 dataset only when recurring refresh was explicitly requested. Do not use
-`precompute_static` for cache-only work. Pass `refreshNow: true` after a new or
-changed precomputed dataset so the first private object exists before smoke.
+`precompute_static` for cache-only work. After a new or changed precomputed
+dataset, queue a first refresh so the first private object exists before
+smoke: `refreshNow: true` on `create_artifact_refresh_schedule` in a Topline
+coding task, or `platform_refresh_artifact_data` with the Build MCP (there is
+no `refreshNow` flag on `platform_deploy_artifact_app`). Every deploy starts
+with empty precomputed datasets, so smoke after the refresh finishes.
 
 `precompute_static` is for rebuilding precomputed HTML/assets; its schedule is
 part of the manifest-owned app contract. `maintenance` is available for

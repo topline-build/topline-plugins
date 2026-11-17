@@ -9,7 +9,11 @@
 This is the golden example for editable records: a Google Sheet (or task
 spreadsheet) that a team edits by hand becomes an app backed by company
 tables. Start from `scripts/artifacts/templates/table-editor`. `/` is a
-list-and-edit page; there is no separate operational surface.
+list-and-edit page; there is no separate operational surface. With the Build
+MCP (the Topline plugin) that template is not on disk: for a request,
+approval or other workflow app start from `platform_init_artifact_app` with
+`starter: "table-approvals-app"`, and for a plain shared list build the page
+over `tables[]` as described below.
 
 ## Topology and contract decisions
 
@@ -29,7 +33,17 @@ list-and-edit page; there is no separate operational surface.
   person the write is for in the row history. The app decides who may change
   what. A draft may only SELECT there unless the manifest sets
   `previewWrites: true`; a sandbox preview gets no token, so try server SQL
-  on a draft deploy instead.
+  on a draft deploy instead. Placeholders are `:name` keys of `params`, the
+  reply's `rows` hold every value as a string, and a copyable Node and Python
+  helper is in [Server runtime recipes](../../references/server-runtime-recipes.md#server-table-sql).
+- A server-only app (every read and write goes through its own server code)
+  sets `serverTables: true` and declares **no** `tables[]`: a deploy without
+  `tables[]` works. A `tables[]` binding is a browser route for every viewer
+  of the app; a `list` binding returns every row's `_row_id`, `_version` and
+  its `readableColumns` whatever the server code filters. Declare `tables[]`
+  only for tables the browser reads or writes directly, and pick
+  `readableColumns` every viewer may see. The Build MCP starter
+  `table-approvals-app` is server-only.
 - A binding's `writeAccess` is `members` by default; set `signed_in` to also
   admit, on the live app, Topline users the app is shared with directly.
 - Platform table-route writes are accepted only on the `live` environment, only on an
@@ -79,6 +93,17 @@ chooses to.
    `relation` (`company_data.<name>`, for example `company_data.clients`);
    use the logical name in `tables[]` and the `relation` in dataset SQL.
 
+## System columns
+
+Every table also has platform-owned columns: `_row_id` (uuid, the row key,
+returned as a string), `_version` (bigint, up by one on each change),
+`_created_at`/`_created_by`, `_updated_at`/`_updated_by`, and
+`_deleted_at`/`_deleted_by` (set by a soft delete). There is no `_id`
+column; naming one fails with `company_table_sql_failed:42703`. Read and
+filter on these (`where _deleted_at is null`), never set them, and never list
+them in `readableColumns` or `writableColumns`: table routes return
+`_row_id` and `_version` with every row already.
+
 ## Manifest explanation
 
 - `tables[]` declares one binding per table the app uses: `alias`
@@ -119,6 +144,11 @@ write, along with `Content-Type: application/json` (a write without it gets
 - **Add**: `POST` the table URL with a JSON object of the new row's
   writable columns, such as `{ "name": "Acme" }` (no `values` wrapper; only
   an inline edit nests them); a success returns 201 with the created row.
+- **Value formats**: `bigint` and `numeric` cells are sent and returned as
+  strings, so no digits are lost in JavaScript; a `uuid` is a lowercase
+  string; a `jsonb` cell is the JSON value itself (an object, array, number,
+  boolean or string) and comes back parsed. A `jsonb` column can't be sorted
+  or filtered (`column_not_sortable`, `column_not_filterable`).
 - **Soft delete**: `DELETE` the row URL with `?expectedVersion=<n>`. Deletes
   are soft: the row keeps existing with `_deleted_at` set, and a write to an
   already-deleted row gets 409 `row_deleted` with the current `row` — tell
