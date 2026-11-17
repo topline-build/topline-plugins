@@ -42,6 +42,44 @@ result = {
 }
 ```
 
+### Node apps
+
+`platform_init_artifact_app` scaffolds this starter in Node. Node has no injected helper; do the same
+two steps yourself with the AWS SDK v3 (declare `@aws-sdk/client-sts` and
+`@aws-sdk/client-bedrock-runtime` in `package.json` dependencies, or the build refuses
+`undeclared_package_import`). The runtime injects `TOPLINE_INFERENCE_ROLE_ARN`,
+`TOPLINE_INFERENCE_REGION` and `TOPLINE_INFERENCE_ACCOUNT_ID` next to
+`PLATFORM_ARTIFACT_BEDROCK_MODEL_ID`; never call Bedrock on the app's own role (it is denied).
+
+```js
+import { STSClient, AssumeRoleCommand } from "@aws-sdk/client-sts";
+import { BedrockRuntimeClient, ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
+
+let cached = null; // { client, expires }
+async function bedrock() {
+  const region = process.env.TOPLINE_INFERENCE_REGION;
+  const role = process.env.TOPLINE_INFERENCE_ROLE_ARN;
+  if (!region || !role || !process.env.PLATFORM_ARTIFACT_BEDROCK_MODEL_ID) throw new Error("bedrock_unavailable");
+  if (cached && cached.expires - Date.now() > 300_000) return cached.client;
+  const sts = new STSClient({ region, endpoint: `https://sts.${region}.amazonaws.com` });
+  const { Credentials: c } = await sts.send(new AssumeRoleCommand({ RoleArn: role, RoleSessionName: "topline-inference", DurationSeconds: 3600 }));
+  const client = new BedrockRuntimeClient({
+    region, endpoint: `https://bedrock-runtime.${region}.amazonaws.com`, maxAttempts: 1,
+    credentials: { accessKeyId: c.AccessKeyId, secretAccessKey: c.SecretAccessKey, sessionToken: c.SessionToken }
+  });
+  cached = { client, expires: c.Expiration.getTime() };
+  return client;
+}
+
+const response = await (await bedrock()).send(new ConverseCommand({
+  modelId: process.env.PLATFORM_ARTIFACT_BEDROCK_MODEL_ID,
+  messages: [{ role: "user", content: [{ text: question }] }],
+  inferenceConfig: { maxTokens: 512 }
+}), { abortSignal: AbortSignal.timeout(10_000) });
+```
+
+Catch every error and return the safe unavailable response; log only the error name.
+
 The helper assumes the model-scoped Topline production role and refreshes its in-memory credentials five minutes before expiry. It leaves customer data/secret clients on their existing workload identity. Missing or denied inference configuration fails closed; there is no customer-account Bedrock fallback. Include STS and Bedrock time in the request deadline and return the safe unavailable response on provider failures. Do not copy credentials into environment variables, source, logs, or chat.
 
 ## Validation and controls

@@ -12,12 +12,13 @@ draft-only lifecycle in `validation-and-lifecycle.md`.
 | `internal-action-tool` | `internal-tool` | Private tool whose external API owns the decision; records people edit go in tables. |
 | `private-api-first-app` | `python-api` | Private `/_artifact/api/*` routes and server-side integrations. |
 | `replace-a-spreadsheet` | `table-editor` + manifest `tables[]` | One-time import into tables with credential columns left out; platform-served row saves on the live app only; conflicts surface as 409. |
+| `table-approvals-app` | Build MCP starter `table-approvals-app` (coding task: `table-editor`) + `serverTables` | Requests and approvals decided in the app's server code over company tables; an app-owned approvers table; no `tables[]` browser route; drafts read-only unless `previewWrites`. |
 | `customer-scoped-map` | Platform-service-backed UI | MapLibre browser surface over a tenant-authenticated, customer-account Amazon Location Maps and Places broker; no browser credentials or implicit location writes. |
 | FastMCP server | `fastmcp-server` | Live-only exact MCP ingress, platform-owned credential, and customer-managed tool review for chat/coding. |
 | `bounded-bedrock-assistant` | `python-api` | Private route, one bounded Bedrock Converse call, no agentic extras. |
 | `knowledge-base-backed-app` | `react-dashboard` + an exact published Knowledge Base grant | Normal artifact reads one approved live release through relative `/_artifact/knowledge/*` broker routes; no token, provider ID, or direct public endpoint. |
 | `signed-webhook-boundary` | Platform service boundary | Current artifact routing cannot expose provider-verifiable, durable machine ingress. |
-| `cache-warmed-multi-source-dashboard` | `multi-source-dashboard` + live dataset | Explicit recurring `refresh_live_cache`, Redis preflight, live fallback, and visible `generatedAt`. |
+| `cache-warmed-multi-source-dashboard` | `multi-source-dashboard` + live dataset | Explicit recurring `refresh_live_cache`, Redis preflight (not where `families.redis` is `not_supported`), live fallback, and visible `generatedAt`. |
 | `precomputed-s3-report` | `artifact-draft` or `react-dashboard` + precomputed dataset | Platform-managed private object storage through declared routes; never expose object URLs. |
 | `materialized-sql-data-product` | `multi-source-dashboard` after upstream work | Upstream materialized table/view is separately owned and cataloged; app performs bounded read-only access. |
 | `customer-api-source-pipeline` | Data Sources build + `platform.connector.rest.v1` | The operational connector, credentials, checkpoints and tables are first-class Data Source objects; with the workspace on, scheduling it creates its data pipeline artifact. |

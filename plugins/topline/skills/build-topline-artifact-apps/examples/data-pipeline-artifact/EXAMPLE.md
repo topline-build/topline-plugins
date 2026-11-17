@@ -66,6 +66,25 @@ Rules the server enforces when a draft is saved:
   cannot be enabled. `timezone` is an IANA name and decides when the cron fires.
 - Schedule names are unique and are what people see; name them by cadence or
   purpose ("Every 15 minutes", "Nightly hard delete").
+- BigQuery tables also carry `sourceTable` (the BigQuery table id), `columns`
+  (what to copy), `primaryKey`, `cursorColumn` (omit for a full reload every
+  run) and `piiColumns` (a catalog label; a column still copies unless you also
+  drop it from `columns`). A draft also checks these against BigQuery: the
+  table exists and is a base table, and every copied, key and cursor column
+  exists with a comparable type. Source columns that collide with Topline's
+  own (`date_inserted`, `date_updated`, and the others) land renamed, for
+  example `source_date_updated_raw`; the chosen `cursorColumn` instead fills
+  `source_date_updated` and gets no `_raw` column of its own.
+- A BigQuery manifest must keep a `full_refresh` schedule: enabled, covering
+  every selected table, with a cron that fires at least daily
+  (`bigquery_full_refresh_required` otherwise). It can be rescheduled but never
+  removed, disabled or left short a table.
+- Changing a BigQuery manifest's `bigquery` block (project, dataset, billing
+  project) or removing a `piiColumns` label from a column that is still
+  copied needs Data Sources access
+  (`bigquery_settings_change_requires_sources_access`); a column that was ever
+  labelled PII keeps that label in the catalog until someone with that access
+  removes it.
 
 ## Change a pipeline (the coder's loop)
 
@@ -126,6 +145,30 @@ Each spreadsheet set up is its own artifact; several can share the tenant's
 Google access, and deleting one never revokes it. The usual change is a single
 schedule's cadence: read, edit that schedule's `cron`/`timezone`, save the
 draft.
+
+### BigQuery
+
+"Add the `applicants` table, stop copying `offer.notes`, mark `recruit.ssn` as
+PII, and move the nightly full refresh to 3:00 AM."
+
+1. `read_pipeline_artifact`. The live manifest has the `bigquery` block
+   (project, dataset, billing project), each table's `sourceTable`, `columns`,
+   `primaryKey`, `cursorColumn` and `piiColumns`, a sync schedule and a
+   `full_refresh` schedule covering every table.
+2. Edit the draft:
+   - add `{ "name": "applicants", "sourceTable": "applicants", "columns": [...], "primaryKey": [...], "cursorColumn": "date_updated" }`
+     to `tables`, and add `"applicants"` to the sync schedule;
+   - remove `"notes"` from `offer`'s `columns`;
+   - add `"ssn"` to `recruit`'s `piiColumns` (it stays copied; dropping it from
+     `columns` instead would stop copying it);
+   - change the `full_refresh` schedule's `cron` to `"0 3 * * *"`.
+3. Save the draft. `bigquery_full_refresh_required` comes back if that
+   schedule is removed, disabled, or stops covering every table; it cannot be
+   turned off, only rescheduled.
+4. Tell the person to review the Tables and Schedules tabs and publish.
+   Publishing re-checks the new table and the column change against BigQuery
+   itself; a column renamed or dropped there since setup comes back as a
+   draft validation error, not a crash.
 
 ## What does not belong in the manifest
 

@@ -38,6 +38,7 @@ Read [Security and runtime boundaries](references/security-and-runtime-boundarie
 - Fetch artifact routes relatively; never call global platform `/api/*` routes from browser code.
 - Keep database connections, source credentials, raw secrets, AWS credentials, and Bedrock calls out of browser bundles.
 - Use declared secret bindings and server-side artifact routes for third-party APIs.
+- For server code that saves to tables, stores files, accepts uploads or reads a secret, copy the contracts in [Server runtime recipes](references/server-runtime-recipes.md): company-table system columns (`_row_id`, `_version`, ...; there is no `_id`), the server table SQL helper, the `ARTIFACT_STORAGE_BINDINGS` shape, the real upload ceiling, `platformSecrets` and Python part requirements.
 - Require platform viewer or tenant authorization for normal app routes.
 - For the current viewer's profile in browser code, fetch `_artifact/me` under the app's base URL. It includes their display name and Auth0 subject when available. For server-side authorization and audit, use the proxy-set `x-platform-viewer-email` header. See [Viewer identity](references/viewer-identity.md).
 - Route external webhooks to platform-service work. The only artifact machine ingress is a live validated `kind: "mcp_server"` app at exact `/_artifact/mcp`, authenticated by a platform-managed bearer that artifact code never receives. It is not a general webhook/header-forwarding contract or idempotency store.
@@ -46,7 +47,7 @@ Read [Security and runtime boundaries](references/security-and-runtime-boundarie
 
 ## Build from maintained sources
 
-1. Copy the selected directory from `scripts/artifacts/templates/` into `artifact-apps/<stable-slug>`.
+1. In a Topline coding task, copy the selected directory from `scripts/artifacts/templates/` into `artifact-apps/<stable-slug>`. With the Build MCP (the Topline plugin) those templates are not on disk: run `platform_init_artifact_app`, with the `starter` that [Choosing an app pattern](references/choosing-an-app-pattern.md#build-mcp-starters) maps to your template.
 2. Treat the package-local `artifact-app.json` as authoritative.
 3. For UI-bearing apps, read [Customer brand and Storybook](references/customer-brand-and-storybook.md), inspect the customer's published design-system Storybook through its MCP, and use the vendored implementation under `src/design-system/`.
 4. Use real domain language and verified data shapes. Do not ship hardcoded task, tenant, sample, or fallback rows.
@@ -64,8 +65,8 @@ Read [Validation and lifecycle](references/validation-and-lifecycle.md) before t
 
 1. Ground every source or relation with current catalog and schema tools.
 2. Run the exact final SQL with production and warm parameter variants and declared bounds.
-3. Run the package's local validation from the repository root.
-4. Commit the artifact manifest/version, synchronize the exact source package, and deploy the draft through bridge tools.
+3. Run the package's local validation (Build MCP: `platform_inspect_artifact_app`; coding task: `validate-local` from the repository root).
+4. Save the source and deploy the draft with your surface's tools (Build MCP: `platform_deploy_artifact_app` in a build session; coding task: commit, source sync and draft deploy bridge tools). The validation reference maps every step to exact tool names.
 5. Poll the existing deployment when a deploy response is delayed; do not create duplicate versions or deployments to retry unknown state.
    When a tool returns `resourceAdvice`, the app ran out of memory, time, or disk: apply the suggested `resources` value and redeploy (at most twice per problem), otherwise change the code. Never ask the user about machine size. If an open problem says Topline raised the live app's size, carry that value into the manifest. See "Machine size and resource failures" in the validation reference.
 6. Run rendered smoke and fix loading, browser, dataset, auth, overflow, and fallback-data failures.
@@ -89,5 +90,6 @@ Read [Validation and lifecycle](references/validation-and-lifecycle.md) before t
 - [Customer brand and Storybook](references/customer-brand-and-storybook.md)
 - [Security and runtime boundaries](references/security-and-runtime-boundaries.md)
 - [Viewer identity](references/viewer-identity.md)
+- [Server runtime recipes](references/server-runtime-recipes.md)
 - [Validation and lifecycle](references/validation-and-lifecycle.md)
 - [Example catalog](references/example-catalog.md)

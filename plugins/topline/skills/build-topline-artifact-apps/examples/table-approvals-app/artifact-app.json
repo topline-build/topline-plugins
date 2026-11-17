@@ -1,0 +1,25 @@
+{
+  "manifestVersion": 2,
+  "id": "table-approvals-app",
+  "title": "Time off requests",
+  "kind": "tool",
+  "runtime": {
+    "target": "aws_lambda_function_url",
+    "region": "us-west-2",
+    "entryPoint": "artifactApp"
+  },
+  "build": { "command": "node src/index.js --build", "outputDir": "dist" },
+  "validation": {
+    "localCommand": "node src/index.js --test",
+    "testCommand": "node src/index.js --test --artifact-tests-json"
+  },
+  "routes": [
+    { "path": "/", "kind": "page", "handler": "artifactApp" },
+    { "path": "/_artifact/api/requests", "kind": "api", "handler": "artifactApp" },
+    { "path": "/_artifact/api/decisions", "kind": "api", "handler": "artifactApp" }
+  ],
+  "sourceBindings": [],
+  "serverTables": true,
+  "env": ["ARTIFACT_ID", "ARTIFACT_VERSION_ID", "ARTIFACT_MANIFEST_URI", "PLATFORM_ARTIFACT_ID", "PLATFORM_ARTIFACT_VERSION_ID", "PLATFORM_ARTIFACT_MANIFEST_URI"],
+  "viewerPolicy": "private"
+}

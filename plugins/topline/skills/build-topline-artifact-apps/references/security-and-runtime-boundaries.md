@@ -24,9 +24,11 @@ variables. The app runtime must not connect directly to Postgres.
 
 For a third-party API, declare an exact region-matching Secrets Manager ARN in
 `secretBindings[]`. The runtime receives the ARN and resolves the value with
-its least-privilege role (`platformSecrets.get(...)` in Node or
-`get_secret(...)` in Python). Keep vendor calls server-side behind a declared
-artifact route.
+its least-privilege role: in Node `await globalThis.platformSecrets.get("<binding name>")`
+(a global the platform installs; there is nothing to import), in Python
+`from platform_artifact_secrets import get_secret`. Keep vendor calls
+server-side behind a declared artifact route. See
+[Server runtime recipes](server-runtime-recipes.md#secrets-in-server-code).
 
 To save credentials from a form, declare `secretWrites` and `PUT` to
 `./_artifact/secrets/<prefix><name>` from the page; never send secrets through
@@ -42,7 +44,13 @@ server code may instead run table SQL as the app (manifest `serverTables: true`)
 by POSTing to the URL in the `x-platform-tables-sql-url` request header with
 the `x-platform-tables-token` it is given as a bearer token;
 the app's own sign-in and logic then decide who may change what, and the
-token must never reach the browser. While tables are on there are no private
+token must never reach the browser. A server-only app declares no `tables[]`:
+each `tables[]` binding is a route every viewer of the app can call, and a
+`list` binding returns every row's `_row_id`, `_version` and readable columns
+regardless of what the server code filters. Declare `tables[]` only for
+tables the browser should read or write directly, with `readableColumns`
+every viewer may see. The request contract, system columns and a copyable
+helper are in [Server runtime recipes](server-runtime-recipes.md). While tables are on there are no private
 workspace tables: build checkpoints and caches are tables too, so name them for
 what they hold and drop them when the build is done.
 Source and analytics reads remain on `run_psql`. Neither path is an unscoped
@@ -52,7 +60,14 @@ platform database escape hatch.
 
 Declare `storageBindings[]` to provision durable named namespaces in the
 harness-managed S3 bucket. Backends use the standard AWS SDK with resolved
-`ARTIFACT_STORAGE_BINDINGS` JSON metadata and workload IAM. This supports files,
+`ARTIFACT_STORAGE_BINDINGS` JSON metadata (an array of
+`{ name, access, bucket, prefix, region }`) and workload IAM. Listing is
+granted only with a `Prefix` inside the namespace, so reading a key that
+doesn't exist answers 403 `AccessDenied`, not `NoSuchKey`. A request body
+through the app must stay at or under about 4 MB (binary bodies over about
+4.7 MB fail with a bare 502); see
+[Server runtime recipes](server-runtime-recipes.md#uploads-and-downloads-through-the-app)
+for the chunked-upload recipe. This supports files,
 exports, app state, tags, versions, pagination and multipart uploads. Use the
 provided prefix for every key and listing. Keep SDK calls and presigning behind
 authenticated app routes; app code authorizes which files each viewer may
