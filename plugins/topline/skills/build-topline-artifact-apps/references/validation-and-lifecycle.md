@@ -15,7 +15,7 @@ tool. If an expected tool is absent, stop with its exact name and the blocker.
 | 2. Source | `platform_init_artifact_app` (optionally with a `starter`) for a new app, or edit the checkout | Copy a template from `scripts/artifacts/templates/` |
 | 3. Local checks | `npm test` in the app dir, then `platform_inspect_artifact_app`; fix every `problems` entry and keep its bundle SHA-256 | `node scripts/artifacts/validate-local --dir <appDir>` from the repository root |
 | 4. Save and deploy the draft | `platform_deploy_artifact_app` with `sessionId`, `artifactVersionId`, `inspectedSourceHash` and `expectedBundleSha256`; then `platform_wait_artifact_deploy` or `platform_deploy_operation` | `commit_artifact`, then `topline-agent-source-sync` and `sync_artifact_app_source` with the printed archive, then `deploy_artifact_app_draft`; poll `artifact_app_deployment_status` until it settles |
-| 5. Data (precomputed or cached datasets) | `platform_refresh_artifact_data` | `create_artifact_refresh_schedule` with `refreshNow: true` |
+| 5. Data (precomputed or cached datasets) | `platform_refresh_artifact_data` | `refresh_artifact_data`, then again with its `refreshTaskName` until the warm settles |
 | 6. Smoke and checks | `platform_run_acceptance_checks` (and `platform_run_artifact_smoke` when asked); `platform_read_artifact_logs` for failures | `run_artifact_app_smoke`; `artifact_app_logs` for failures |
 | 7. Review | `platform_prepare_artifact_validation`, `platform_request_artifact_validation`, then poll `platform_artifact_validation_status` | `prepare_artifact_app_validation`, then `request_validation` |
 | 8. Hand off | `platform_open_artifact`, then `platform_close_build_session` | Leave the validated draft for operator review |
@@ -24,6 +24,14 @@ A deploy that is still building is not a platform blocker: wait on the same
 operation (each wait call is bounded), and never start a second deploy to
 retry an unknown state. Each committed deploy moves a build session to a new
 `artifactVersionId`; use the new one next.
+
+A build failure coded `CHECKER_CRASHED` is Topline's, not the app's: its
+message names where Topline's build checker crashed. Don't edit the app or
+deploy again for it. In a coding task, call `report_platform_blocker` with
+category `build_runner`; from a Build MCP client, tell Topline. A failure coded
+`CHECK_INTERRUPTED` is an unexpected error the checker did not throw: fix what
+it names, and report it only if it names nothing in the app and a second deploy
+stops the same way.
 
 Do not skip source sync or inspect, treat a build as a deploy, smoke an
 ambiguous version, or use direct cloud commands.

@@ -17,19 +17,20 @@ it ready.
 `mode: "precomputed"` requires an enabled `refresh_live_cache` schedule and
 `warmParams` for every declared variant. The same schedule mode may warm a live
 dataset only when recurring refresh was explicitly requested. Do not use
-`precompute_static` for cache-only work. After a new or changed precomputed
-dataset, queue a first refresh so the first private object exists before
-smoke: `refreshNow: true` on `create_artifact_refresh_schedule` in a Topline
-coding task, or `platform_refresh_artifact_data` with the Build MCP (there is
-no `refreshNow` flag on `platform_deploy_artifact_app`). Every deploy starts
-with empty precomputed datasets, so smoke after the refresh finishes.
+`precompute_static` for cache-only work. Schedules start only when the app is
+published; a draft gets none. After a new or changed precomputed or cached
+dataset, queue a refresh so the first private object exists before smoke:
+`refresh_artifact_data` in a Topline coding task (call it again with the
+returned `refreshTaskName` to read the result), or
+`platform_refresh_artifact_data` with the Build MCP. Every deploy starts with
+empty precomputed datasets, so smoke after the refresh finishes.
 
 `precompute_static` is for rebuilding precomputed HTML/assets; its schedule is
 part of the manifest-owned app contract. `maintenance` is available for
 maintenance work. All schedules declare a five-field cron, timezone, prompt,
 and optional enabled/output-strategy settings. `commit_artifact` syncs them as
-manifest-owned Platform schedules; do not create a raw scheduler job or a
-separate duplicate manual schedule.
+manifest-owned Platform schedules, held until publish; there is no tool to
+create one by hand, and no raw scheduler job.
 
 ## Implementation checklist
 
@@ -39,7 +40,8 @@ separate duplicate manual schedule.
    `maxBytes`, `timeoutMs`), plus TTL or precompute parameters.
 3. Make the UI label its update/freshness state and handle unavailable, empty,
    partial, stale, and error results.
-4. For precomputed data, declare enabled `refresh_live_cache`, use
-   `refreshNow: true` when applicable, and smoke only after the route has data.
+4. For precomputed data, declare enabled `refresh_live_cache`, refresh the
+   draft's data with `refresh_artifact_data` (Build MCP:
+   `platform_refresh_artifact_data`), and smoke only after the route has data.
 5. For upstream materialization, separately verify the upstream cadence and
    data quality; the artifact app does not own that producer.
