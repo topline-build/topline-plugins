@@ -16,12 +16,13 @@ the Build MCP, use the matching starter from [Build MCP starters](#build-mcp-sta
 | Page that only reads platform routes, with no backend of its own | Static-only `parts` | One `static` part and no server part; no machine runs for it. See "One app, several parts". |
 | Website or app with its own backend API (two parts, possibly two languages) | `web-and-api` | One artifact with `parts`: a static website part and a server API part, routed by path under one address. |
 | MCP server exposed to Topline chat or Topline Coding Agent tasks | `fastmcp-server` | Exact FastMCP 3.4.7 lock, stateless JSON Streamable HTTP at `/_artifact/mcp`; connect and review after live promotion in Developer Access. |
-| External webhook receiver | Platform service | Current artifact routing does not expose provider-verifiable machine ingress. |
+| External webhook receiver | Node app with a webhook route (`examples/webhook-receiver`) | Public `api` route with a `webhook` block: provider headers pass, Topline checks HMAC signatures before the handler, dedupe on a delivery ID. Queueing and replay still need a platform service. |
 | Customer API that must be synced on a schedule | Data Sources build, then its data pipeline artifact | Create a source, connection, connector runtime contract, materialized catalog resources, and a pipeline; with the workspace on it becomes a data pipeline artifact. Build an artifact app only as a downstream consumer. |
 | A page for running a connector: its health, tables, schedules and runs | `connector-app` | Static-only page that reads the connector through manifest `pipelines[]` and `./_artifact/pipeline/<alias>`. Start it with `init-app --template connector-app --pipeline-artifact-id <connector artifact id>`. Read-only until the page actions route ships. Keep everything for the connector inside the page; never link to a Topline connector page. Needs Connector page apps turned on for the account. |
 | Change which tables a connector syncs or when | Data pipeline artifact | Edit the `pipelineManifest` as a draft; a person publishes. See `examples/data-pipeline-artifact/EXAMPLE.md`. |
 | Exact narrow count aggregate | `live-aggregate-dashboard` | `service_aggregate` binding with `aggregate.type: "count"` only. |
 | A customer viewing only their own customer row | `viewer-scoped-dashboard` | Viewer binding with required session and `customers.email` filter. |
+| A public front (quote or booking form, status page) with a private back office | One app; mark the public routes `audience: "public"` | Public routes read and write only through the app's server code (server table SQL). See [Public pages](security-and-runtime-boundaries.md#public-pages) and `examples/public-form-private-board/EXAMPLE.md`. Never split it into two apps. |
 
 ## Build MCP starters
 

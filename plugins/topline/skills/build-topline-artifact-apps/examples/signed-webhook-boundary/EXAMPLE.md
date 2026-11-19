@@ -4,25 +4,19 @@
 
 "Accept provider event notifications, safely record each event once, and show operators the receiver status."
 
-## Classification: platform service, not an artifact app
+## Classification: an artifact app with a webhook route
 
-Do not create an `artifact-app.json` for this request under the current contract. Raw artifact Lambda URLs require AWS IAM, stable artifact routes authorize a viewer before forwarding, and the proxy does not forward arbitrary provider signature, timestamp, or delivery-ID headers. The artifact runtime also has no general transactional idempotency store for machine ingress.
+This used to be platform-service work. Apps now receive webhooks on a public
+`api` route with a `webhook` block: Topline passes the provider headers the
+manifest names and the exact body, checks an HMAC signature before the handler
+runs, and the app records each event once with a unique delivery ID. Build it
+from [Webhook receiver](../webhook-receiver/EXAMPLE.md) and the
+[provider recipes](../../references/webhook-recipes.md).
 
-A secret binding and declared API path do not create a public webhook. Dropping viewer checks would still leave an unreachable or unverifiable route and would weaken the platform boundary.
+## What still belongs to a platform service
 
-## Required platform-service design
-
-Use an explicitly reviewed machine-ingress service with:
-
-- a narrowly exposed endpoint and provider-specific verification adapter based on current vendor documentation;
-- exact raw-body preservation and an allowlist for required signature, timestamp, and delivery-ID headers;
-- bounded body size, rate limiting, secret rotation, constant-time signature checks, and replay-window enforcement;
-- a durable idempotency store with a uniqueness constraint, retention policy, atomic effect boundary, and ambiguous-outcome reconciliation;
-- queue/dead-letter handling when processing is not safely synchronous;
-- redacted logs, observable failures, and safe provider acknowledgments.
-
-An artifact app may be an adjacent private operations dashboard over approved webhook status data after that service exists. It does not own ingress.
-
-## Evidence required before this becomes artifact-native
-
-Only add a webhook artifact specimen after the platform contract has a tested per-route machine-ingress capability, provider-header forwarding contract, body/rate controls, and durable idempotency boundary. Validation must send signed deliveries through the deployed ingress, reject bad/stale/replayed requests, preserve exact bytes and headers, and prove concurrent duplicates create one effect.
+- Durable queueing, platform retries, a delivery log or replay. Webhook routes
+  answer synchronously; the provider's own retries cover app downtime.
+- Signature schemes that aren't HMAC (RSA or Ed25519 signatures, mutual TLS,
+  IP allowlists) beyond what the app can check itself from `passHeaders`.
+- Webhooks into `kind: "mcp_server"` apps.
