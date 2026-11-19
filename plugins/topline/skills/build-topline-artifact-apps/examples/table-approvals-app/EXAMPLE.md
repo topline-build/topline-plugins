@@ -26,8 +26,12 @@ code the same way.
 - The server reads the viewer from the `x-platform-viewer-email` header,
   filters "My requests" by it, and passes it as `actingUser` so the row
   history names the person.
-- There are no platform roles or groups yet. An app-owned approvers table is
-  the role list; the server checks it on every decision.
+- Topline has no platform roles or groups. Approvers are an app role: follow
+  [App roles](../app-roles/EXAMPLE.md) for the `<app_slug>_roles` table, the
+  server check on every decision, `./_artifact/api/me`, and the "People and
+  roles" page where managers (and always the app's editors) add approvers.
+  The starter's `approval_approvers` table is an older shape of the same
+  idea; move it to the roles table when you build on the starter.
 - A decision is an optimistic update: `where _row_id = :id and _version =
   :version and status = 'pending'`. When `rowCount` is 0 the server re-reads
   the row and answers 409 (someone else decided first), 403 (your own
@@ -65,8 +69,8 @@ create table company_data.approval_approvers (
 )
 ```
 
-Then insert the approvers (`insert into company_data.approval_approvers
-(email) values ('<manager email>')`). The platform adds the system columns
+Don't seed approvers by hand: with the [App roles](../app-roles/EXAMPLE.md)
+pattern, an editor of the app adds them on the "People and roles" page. The platform adds the system columns
 (`_row_id`, `_version`, `_created_at`, ...; there is no `_id`) to both tables;
 see [Server runtime recipes](../../references/server-runtime-recipes.md#company-table-system-columns).
 
@@ -106,6 +110,7 @@ decide on the draft, and say that a draft write changes real rows.
 
 ## Limitations
 
-- No notifications, no platform roles, no isolated draft data.
+- No notifications, no platform roles (roles are app-owned; see
+  [App roles](../app-roles/EXAMPLE.md)), no isolated draft data.
 - A second identity can't be simulated on a draft; test the requester-only
   view on the live app.

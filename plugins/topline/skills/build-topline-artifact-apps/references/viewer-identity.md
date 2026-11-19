@@ -37,6 +37,7 @@ Treat a missing email as an anonymous viewer, never as an error to work around.
 | Live app limited to **Only people added**, opened by an approved person (on a Topline address or a company domain) | Present | `public` |
 | Live app set to **Anyone with the link** | Present only if the visitor happens to be signed in to Topline in that browser; treat as anonymous | `public` |
 | Platform machine call to a `kind: "mcp_server"` app at `/_artifact/mcp` | Absent | `internal` |
+| A public route (`audience: "public"`) opened by anyone who can't already see the app, signed in or not | Absent | `public` (and `x-platform-route-audience: public`) |
 
 `public` describes the link, not whether the viewer signed in. Decide
 "signed in or not" from the email header alone.
@@ -93,9 +94,7 @@ asking. Server code reads the headers instead.
 - **Scope data.** Filter server-side by the header email. For the platform
   `customers` binding, use the viewer-scoped binding instead; the platform
   filters it for you.
-- **App-specific roles.** Keep them in a table keyed by
-  lowercased email (manifest `tables[]`) and look them up server-side. The
-  platform does not supply roles.
+- **App-specific roles.** See [Roles inside your app](#roles-inside-your-app).
 - **Writes and audit.** Record the header email as the actor on every write.
 - **Require sign-in.** Return `401` when a route needs a viewer and the email is
   missing. For an app that must never be anonymous, also set `viewerPolicy` to
@@ -138,6 +137,38 @@ function currentViewer(req) {
   };
 }
 ```
+
+## Roles inside your app
+
+Topline does not supply roles. Sharing decides who can open an app; the app
+decides what each person may do inside it (approver, rep, helpdesk agent).
+Every app with roles follows the same pattern; the full code is in
+[App roles](../examples/app-roles/EXAMPLE.md).
+
+- **One roles table per app**, a company table such as `<app_slug>_roles`
+  with `email` (lowercase), `role`, `granted_by` and `granted_at`, unique on
+  email plus role. Read and write it only from server code
+  (`serverTables: true`); declare no `tables[]` binding for it.
+- **Check on the server, every request.** Read the viewer from
+  `x-platform-viewer-email`, look up their roles with server table SQL (or a
+  cache of at most 60 seconds), and answer `403` when the role is missing.
+  The browser may read roles from the app's own `GET ./_artifact/api/me`
+  (`{ email, roles }`) to hide buttons, but never decides access.
+- **No lock-out, no seeding.** A viewer whose `x-platform-artifact-access` is
+  `owned` (the app's owner and editors) can always manage roles. The app may
+  also grant a `role_manager` role to people who don't edit the app.
+- **A "People and roles" page** (`#/people`) where managers add someone by
+  email and remove them; every change records `granted_by`. Adding a role
+  doesn't share the app, so the page reminds the manager to share it in
+  Topline.
+- **The customer's own setup** maps in through the lookup: plain email rows
+  (default), domain rules in `<app_slug>_role_rules` (`*@finance.acme.com`),
+  or a synced roster joined on email.
+- **Public routes** never read roles: an anonymous visitor has no email.
+
+Don't hardcode email lists in code or env, decide access in browser code, or
+share one roles table across apps (any app that declares a table can write
+all of it, so one app could change another's permissions).
 
 ## Testing locally
 

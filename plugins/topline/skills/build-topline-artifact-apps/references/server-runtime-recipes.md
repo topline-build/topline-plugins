@@ -1,7 +1,7 @@
 # Server Runtime Recipes
 
 Copyable server-side contracts for an app's own code: company-table system
-columns, server table SQL, managed file storage, uploads, secrets and Python
+columns, server table SQL, managed file storage, browser uploads, secrets and Python
 parts. Everything here runs in the app's server code (a Node handler or a
 Python part), never in browser code.
 
@@ -172,43 +172,111 @@ What the role allows and doesn't:
   that, `GetObject` or `HeadObject` on a key that doesn't exist answers
   **403 `AccessDenied`**, not `NoSuchKey`/404. Treat `AccessDenied` on a key
   your own code built as "not found", or keep the keys you wrote in a table.
-- Drafts use the same files as live. Use a separate binding name for
-  draft-only data. No CORS is configured on the bucket, so browsers can't PUT
-  to it directly.
+- Server code in drafts uses the same files as live. Use a separate binding
+  name for draft-only data. Browser uploads are the exception: they go through
+  the platform upload route below, which keeps draft uploads apart.
 
 ## Uploads and downloads through the app
 
-The proxy refuses a request body over 5,000,000 bytes with 413
-`artifact_app_proxy_body_too_large`, but a **binary body over about 4.7 MB
-fails earlier with a bare 502**, because the body is base64-encoded on its way
-to the function. Keep every request body at or under **4 MB**. App responses
-have the same ceiling: hand the viewer a short-lived presigned GET (it works in
-`<img>`, `<iframe>` and download links) for anything larger, after your code
-has checked the viewer may see that file.
+The app proxy forwards request bodies up to **4,500,000 bytes**; a larger one
+gets a clean 413 `artifact_app_proxy_body_too_large` (never a 502). Never send
+file bodies through your own routes, and never chunk or stitch files in server
+code. Browser uploads go straight to storage through the platform upload route.
 
-Chunked upload recipe for larger files (tested with a 9 MB file in 3 MB parts):
+Declare `uploads` on a `read_write` binding:
 
-1. Browser: slice the `File` into 3 MB pieces and `PUT` each, in order, to
-   `./_artifact/api/uploads/<uploadId>/parts/<n>` with
-   `Content-Type: application/octet-stream` (`uploadId` from
-   `crypto.randomUUID()`).
-2. Server: check the viewer, then write each body to
-   `prefix + "uploads/<uploadId>/part-<n>"`.
-3. Browser: `POST ./_artifact/api/uploads/<uploadId>/complete` with the part
-   count, file name and type.
-4. Server: read the parts in order, concatenate, `PutObject` the final key,
-   delete the parts, and record the key (and its owner) in a table. Cap the
-   total size (for example 25 MB) so it fits the function's memory.
+```json
+{ "name": "receipts", "access": "read_write",
+  "uploads": { "maxBytes": 26214400, "types": ["image/*", "application/pdf"],
+               "viewerAccess": "own", "unclaimedExpiryDays": 1,
+               "onComplete": "/_artifact/api/receipts/uploaded" } }
+```
 
-S3 multipart upload doesn't help here: every part but the last must be at
-least 5 MiB, which is above what one proxied request can carry.
+- `maxBytes` (required, at most 5 GiB; 25 MB is a good default) and `types`
+  (required, 1-20 exact MIME types or `type/*`, never `*/*`; `image/*` does not
+  include SVG, list `image/svg+xml` explicitly if you need it).
+- `viewerAccess`: `"own"` (default) lets a viewer list, open and delete only
+  files they uploaded; `"all"` shares every file with every viewer.
+- `unclaimedExpiryDays` (1-7, default 1): an upload that never completes, or
+  that your callback refused, is deleted after that many days.
+- `onComplete`: a declared `api` route on a Node server part. The platform
+  calls it after its own checks pass. Always declare it.
+- `audience: "public"` is not supported yet; uploads need a signed-in viewer.
+
+In the browser, use the vendored helper (`src/vendor/artifact-uploads.js` in
+the starter templates; copy it unchanged from another template if yours lacks it):
+
+```js
+import { upload, fileUrl, listFiles, deleteFile } from "./vendor/artifact-uploads.js";
+const result = await upload(file, { binding: "receipts", onProgress: (sent, total) => setProgress(sent / total) });
+// result.status === "completed": result.app is what onComplete returned (for example the new row id).
+// result.status === "pending": the file is kept but your callback didn't answer; reconcile with listFiles.
+img.src = fileUrl("receipts", result.file.key);
+```
+
+`upload` picks single or multipart upload, retries, resumes after a dropped
+connection (it keeps the upload id in `sessionStorage`), sends the file's
+SHA-256 and cancels with an `AbortSignal`. A refused file rejects with
+`error.message === "upload_rejected"` and `error.detail.reason`.
+
+The platform picks every key (`uploads/<yyyy>/<mm>/<uuid>/<name>`), never
+overwrites a file, and on completion checks the size, the content type (by
+sniffing the first bytes) and the checksum. A file that fails is deleted and
+never reaches your app.
+
+The `onComplete` route receives a POST with JSON `{ binding, key, size, type,
+filename, sha256?, sha256Verified?, uploadedBy, environment }` and the
+uploader's `x-platform-viewer-email`. The Lambda adapter verifies the
+platform's signature before your handler runs, so nothing else can call it.
+Answer 2xx to accept (your JSON goes back to the browser), or a 4xx with
+`{ "reason": "..." }` to refuse: the file is deleted and the browser sees the
+reason. A 5xx or no answer within 10 seconds keeps the file and tells the
+browser `pending`; it is never lost. The platform calls the route at most once
+per upload, but write it to be idempotent anyway (key your row on `key`), since
+a `pending` file may be reconciled later.
+
+Downloads: `GET ./_artifact/storage/<binding>/files/<key>` redirects to a
+five-minute storage link (`?download=1` for an attachment), served with the
+type recorded at upload. Only images (not SVG) and PDFs open inline; HTML, SVG,
+XML, text and everything else always download as attachments. `GET
+./_artifact/storage/<binding>/files?prefix=uploads/&cursor=` lists, and
+`DELETE` on a file deletes it. Never presign your own links for these files.
+
+To let someone else open one file in an `"own"` binding (an approver opening a
+receipt, say), your server code asks for a share link:
+
+```js
+const { url } = await globalThis.platformStorage.shareLink(req, "receipts", {
+  key, viewerEmail: approverEmail, ttlSeconds: 900 // at most 3600; omit viewerEmail for any viewer of the app
+});
+```
+
+`url` is relative (`./_artifact/storage/...?link=...`); hand it to the page.
+The link opens that file only, only for the named viewer when `viewerEmail` is
+set, and still requires the viewer to be able to open the app. The platform
+token behind it lives only in the function's environment. Only the app's current
+deployment can ask for links: the live app, or the latest draft. A version
+preview pinned to an older draft (`/versions/<id>/`) gets 401
+`platform_token_invalid`; open the latest draft to test links.
+
+Drafts: a draft's **server code still uses live storage** (its
+`ARTIFACT_STORAGE_BINDINGS` prefix is the live one), so server-side writes in a
+draft touch live files. Only **browser uploads** from a draft are kept apart:
+they go under `app-preview/`, are deleted after 7 days, never show in the live
+app and aren't copied on publish. A draft's server code reaches those uploads
+through the callback payload and share links. On a live app, uploads and deletes
+need the app's own address (its subdomain or custom domain), like table saves.
+
+Local checks: `validate-local` answers `./_artifact/storage/*` in its render
+smoke with an in-memory route (same size and type rules, no callback).
 
 ## Secrets in server code
 
 Bind an approved Secrets Manager ARN in `secretBindings: [{ "name": "crmApiKey",
 "env": "CRM_API_KEY_SECRET_ARN", "secretArn": "<arn>" }]` (list approved
 references with `platform_list_build_secrets`; an empty list means none is
-approved for this build yet, so ask the person). Read the value at runtime
+approved for this build yet, so ask for one with `platform_request_build_secret`;
+see [Getting a key](security-and-runtime-boundaries.md#getting-a-key)). Read the value at runtime
 only, never at build time:
 
 - Node: the platform installs a global; no import is needed.
