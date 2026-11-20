@@ -288,6 +288,29 @@ only, never at build time:
 Both cache the value per function instance. Never return it to the browser or
 write it to a log.
 
+### Calling `/api/v1/pestroutes/connections` with an app key
+
+To add or manage a PestRoutes account from the app (the External API guide's
+"PestRoutes connections" section has the full contract), bind the Topline app
+key (`tlk_...`, `pestroutes:connect` scope) as a secret and call Topline from
+**server code only**. The API origin arrives as the `x-platform-api-origin`
+request header, which the platform sends to apps with `"serverTables": true`.
+
+```js
+const origin = req.headers["x-platform-api-origin"];
+const key = await globalThis.platformSecrets.get("toplineAppKey");
+const res = await fetch(new URL("/api/v1/pestroutes/connections", origin), {
+  method: "POST",
+  headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+  body: JSON.stringify({ apiUrl, apiKey, apiToken, groupName, label })
+});
+```
+
+`validate-local` accepts a quoted path starting `/api/v1/pestroutes/connections`
+only when the app has `secretBindings`, and, in an app with parts, only inside
+a server part; a website part naming it is refused. Never send an `Origin`
+header (Topline answers 403) or pass the key or the PestRoutes keys to the browser.
+
 ## Python server parts
 
 A Python part runs an ASGI app (FastAPI) behind Lambda through `mangum`.
