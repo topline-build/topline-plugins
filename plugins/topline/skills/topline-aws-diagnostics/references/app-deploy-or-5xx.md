@@ -106,6 +106,7 @@ const startedAt = Date.now();
 const notChecked = [];             // refused reads: the exact action, a permission the user can request
 const problems = [];               // other failed reads (throttling, validation, timeouts)
 let callsMade = 0;
+let lastTrailCallAt = 0;            // CloudTrail LookupEvents allows 2 calls a second per account
 const DENIED = /AccessDenied|Unauthorized|not authorized|write_blocked|s3_requires_app_scope/i;
 
 function short(text, max) {
@@ -128,7 +129,15 @@ const THROTTLED = ["ThrottlingException", "Throttling", "TooManyRequestsExceptio
 
 async function aws(service, operation, params, expected) {
   callsMade += 1;
-  const send = () => call_aws(service, operation, REGION, params || {});
+  const send = () => {
+    if (service === "cloudtrail") {
+      // Pace CloudTrail so its 2-a-second limit doesn't spend the call budget on throttles.
+      const until = lastTrailCallAt + 550;
+      while (Date.now() < until) { /* wait */ }
+      lastTrailCallAt = Date.now();
+    }
+    return call_aws(service, operation, REGION, params || {});
+  };
   let r = await send();
   // CloudTrail LookupEvents allows about 2 calls a second: back off and retry a throttled read
   // (no timers in the runner, so wait on the clock; at most ~1.75 s in all).
@@ -156,14 +165,22 @@ async function page(service, operation, params, opt) {
   const out = { items: [], pages: 0, complete: false, error: null };
   let size = o.size, cursorKey = null, cursor = null;
   while (out.pages < o.maxPages && out.items.length < o.maxItems) {
-    if (!budgetLeft()) { out.error = "script_budget"; break; }
+    if (!budgetLeft()) {
+      out.error = "script_budget";
+      notChecked.push({ action: service + ":" + operation, errorCode: "script_budget", message: "The script's call or time budget ran out before this read finished; it covers only " + out.pages + " page(s)." });
+      break;
+    }
     const req = Object.assign({}, params);
     if (o.sizeKey) req[o.sizeKey] = size;
     if (cursor) req[cursorKey] = cursor;
     const r = await aws(service, operation, req, o.expected);
     if (failed(r)) { out.error = r.errorCode; break; }
     if (r.$truncated) {
-      if (!o.sizeKey || size <= 1) { out.error = "item_over_output_cap"; break; }
+      if (!o.sizeKey || size <= 1) {
+        out.error = "item_over_output_cap";
+        problems.push({ call: service + ":" + operation, errorCode: "item_over_output_cap", message: "One item is larger than the runner's per-call output cap, so this read is incomplete." });
+        break;
+      }
       size = Math.max(1, Math.min(Math.floor(size / 2), r.$itemsReturned || size));
       continue;
     }
