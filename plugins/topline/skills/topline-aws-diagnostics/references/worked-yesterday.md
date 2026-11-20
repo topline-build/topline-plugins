@@ -113,9 +113,20 @@ function denied(r, action) {
 
 // One AWS call. Failures resolve to { ok: false, errorCode, message }. Codes in `expected`
 // (ResourceNotFoundException for a log group that does not exist yet) are answers, not problems.
+const THROTTLED = ["ThrottlingException", "Throttling", "TooManyRequestsException", "RequestLimitExceeded"];
+
 async function aws(service, operation, params, expected) {
   callsMade += 1;
-  const r = await call_aws(service, operation, REGION, params || {});
+  const send = () => call_aws(service, operation, REGION, params || {});
+  let r = await send();
+  // CloudTrail LookupEvents allows about 2 calls a second: back off and retry a throttled read
+  // (no timers in the runner, so wait on the clock; at most ~1.75 s in all).
+  for (let attempt = 0; attempt < 3 && r && r.ok === false && THROTTLED.indexOf(r.errorCode) !== -1; attempt += 1) {
+    const until = Date.now() + 250 * Math.pow(2, attempt);
+    while (Date.now() < until) { /* wait */ }
+    callsMade += 1;
+    r = await send();
+  }
   if (!failed(r)) return r;
   if (r && r.errorCode === "credentials_unavailable") throw new Error("credentials_unavailable: " + r.message);
   const code = r ? r.errorCode : "no_response";
@@ -126,18 +137,18 @@ async function aws(service, operation, params, expected) {
 }
 
 // Pages through a list in small pages, following NextToken, nextToken or NextMarker (as Marker).
-// A $truncated page dropped items to fit the per-call cap and lost its token: never count from it,
-// retry the same page smaller. Empty pages that still carry a token (FilterLogEvents) are followed
-// up to maxPages. `complete` is true only when the last page had no token.
+// A $truncated page dropped items to fit the per-call cap and lost its cursor: never count from it,
+// retry the same page smaller. Empty pages that still carry a cursor (FilterLogEvents) are followed
+// up to maxPages. `complete` is true only when the last page had no cursor.
 async function page(service, operation, params, opt) {
   const o = Object.assign({ items: "Items", size: 20, sizeKey: "MaxResults", maxPages: 5, maxItems: 200, expected: [] }, opt);
   const out = { items: [], pages: 0, complete: false, error: null };
-  let size = o.size, tokenKey = null, token = null;
+  let size = o.size, cursorKey = null, cursor = null;
   while (out.pages < o.maxPages && out.items.length < o.maxItems) {
     if (!budgetLeft()) { out.error = "script_budget"; break; }
     const req = Object.assign({}, params);
     if (o.sizeKey) req[o.sizeKey] = size;
-    if (token) req[tokenKey] = token;
+    if (cursor) req[cursorKey] = cursor;
     const r = await aws(service, operation, req, o.expected);
     if (failed(r)) { out.error = r.errorCode; break; }
     if (r.$truncated) {
@@ -148,9 +159,9 @@ async function page(service, operation, params, opt) {
     out.pages += 1;
     const list = r[o.items];
     if (Array.isArray(list)) for (const item of list) out.items.push(item);
-    if (r.NextToken) { tokenKey = "NextToken"; token = r.NextToken; }
-    else if (r.nextToken) { tokenKey = "nextToken"; token = r.nextToken; }
-    else if (r.NextMarker) { tokenKey = "Marker"; token = r.NextMarker; }
+    if (r.NextToken) { cursorKey = "NextToken"; cursor = r.NextToken; }
+    else if (r.nextToken) { cursorKey = "nextToken"; cursor = r.nextToken; }
+    else if (r.NextMarker) { cursorKey = "Marker"; cursor = r.NextMarker; }
     else { out.complete = true; break; }
   }
   if (out.items.length > o.maxItems) out.items.length = o.maxItems;
