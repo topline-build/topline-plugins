@@ -27,6 +27,7 @@ Read [Data freshness and materialization](references/data-freshness-and-material
 
 - Use bounded live SQL plus a nonzero cache TTL for ordinary read-heavy dashboards.
 - Use `refresh_live_cache` to warm live caches or recompute `mode: "precomputed"` datasets without creating an artifact revision.
+- When `platform_capability_status` shows `families.appMessaging` available, an app can message people in Slack or by email (`notify`) and run one of its own routes on a schedule (`mode: "call_route"`). See [Message people and run on a schedule](references/server-runtime-recipes.md#message-people-and-run-on-a-schedule).
 - Let the platform worker store precomputed results as private tenant-scoped JSON in platform object storage. Keep browser reads on relative declared `/_artifact/data/*` routes.
 - Keep reusable ingestion and transformation in connector-owned or pipeline-owned materialized tables or views. An artifact app's schedule does not become an arbitrary ETL engine; recurring ingestion is scheduled through the source's data pipeline artifact.
 - Use `precompute_static` only when the intended output is a new static artifact revision.
@@ -74,7 +75,7 @@ Read [Validation and lifecycle](references/validation-and-lifecycle.md) before t
 6. Run rendered smoke and fix loading, browser, dataset, auth, overflow, and fallback-data failures.
 7. Compare displayed headline values with bounded direct control queries.
 8. Prepare validation, request review, and stop on escalation or unavailable reviewer infrastructure. The reviewer reads the page's text as it first loads; build every brief requirement, including charts, so it shows there (see "What the reviewer can check" in the validation reference).
-9. Leave live promotion to the operator.
+9. Leave live promotion to the operator. If the app saves records, say in your summary that the draft can't save and that publishing (private to them until they share it) is how to try saving; never tell the person to add, edit or delete rows on the draft.
 
 ## Keep the contract maintainable
 
