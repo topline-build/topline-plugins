@@ -139,6 +139,83 @@ The Build MCP starter `table-approvals-app` (`platform_init_artifact_app`)
 ships the Node helper with a request form, a "my requests" list, an approver
 queue backed by an app-owned approvers table, and no `tables[]`.
 
+## Message people and run on a schedule
+
+Only when `platform_capability_status` shows `families.appMessaging` as
+`available`. Otherwise these headers never arrive and a `call_route` schedule
+skips every run: say so, and build the page without them.
+
+**Message people (`notify`).** Declare `"notify": { "enabled": true }` (needs a
+server part). Server code then gets `x-platform-notify-url` and
+`x-platform-notify-token` on every request it serves, including scheduled
+runs. `POST` JSON `{ "to": "owner" | "<email>" | [...], "text": "...", "link"?: "https://..." }`
+with the token as a Bearer `Authorization` header.
+
+- The message goes as a Slack DM from the company's Topline Slack app, or by
+  email when the person isn't on Slack. It ends with "Sent by <app> · Open app".
+- Only people who can open the app receive it; anyone else comes back as
+  `skipped: not_allowed`. At most 25 recipients a call, 2,000 characters of
+  plain text, 200 messages a day per app and 20 a day per person.
+- A draft sends only to its owner, marked `[Test]`, so test the real wording on
+  the draft. The live app sends to everyone named.
+- The answer is `{ ok: true, results: [{ to, status: "sent" | "skipped" | "failed", channel?, reason? }] }`.
+  Report skipped and failed people in the app's own run log; never retry a
+  `sent` one.
+
+**Run on a schedule (`call_route`).** Add a `refreshSchedules[]` entry with
+`"mode": "call_route"` and `"route"` naming one of the app's own `api` routes,
+for example `/_artifact/jobs/morning-digest`. It runs only on the published
+app (a draft's schedule waits until publish), as a `POST` with no viewer:
+`x-platform-artifact-access: system` and `x-platform-scheduled: <schedule name>`.
+The route gets the same table, notify and events headers as any request, and
+the app's normal route time limit. Answer 2xx when the job finished. Any other
+answer, or running out of time, fails the run, shows on the app's problems,
+and is **not retried**, so make the job safe to run twice (dedupe on the day
+in a run-log table). To try the job on a draft, call the same route yourself.
+
+```js
+// Node: one call for any job route or page action.
+async function notify(req, to, text, link) {
+  const url = req.headers["x-platform-notify-url"];
+  const token = req.headers["x-platform-notify-token"];
+  if (!url || !token) throw Object.assign(new Error("notify_unavailable"), { status: 503 });
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json", "authorization": `Bearer ${token}` },
+    body: JSON.stringify({ to, text, ...(link ? { link } : {}) })
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || body.ok === false) throw Object.assign(new Error(body.error ?? `notify_http_${response.status}`), { status: response.status, hint: body.hint });
+  return body.results;
+}
+
+// The scheduled route: the scheduler, or the owner trying it on a draft.
+const caller = req.headers["x-platform-artifact-access"];
+if (req.headers["x-platform-scheduled"] !== "morning-digest" && caller !== "owned" && caller !== "internal") {
+  return res.status(403).json({ error: "scheduled_only" });
+}
+```
+
+```python
+# Python (FastAPI): a plain `def` route, this helper blocks.
+import json, urllib.request
+
+def notify(request, to, text, link=None):
+    url = request.headers.get("x-platform-notify-url")
+    token = request.headers.get("x-platform-notify-token")
+    if not url or not token:
+        raise RuntimeError("notify_unavailable")
+    payload = {"to": to, "text": text, **({"link": link} if link else {})}
+    req = urllib.request.Request(url, data=json.dumps(payload).encode(), method="POST",
+        headers={"content-type": "application/json", "authorization": f"Bearer {token}"})
+    with urllib.request.urlopen(req, timeout=20) as response:
+        return json.loads(response.read())["results"]
+```
+
+Batch table writes in a job: one `INSERT ... SELECT * FROM unnest(...)` or a
+multi-row `VALUES` per call, not one call per row. Table writes are limited per
+minute, and a row-by-row job stops partway.
+
 ## Managed file storage
 
 Declare `storageBindings: [{ "name": "files", "access": "read_write" }]` (or
