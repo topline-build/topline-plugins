@@ -106,6 +106,30 @@ connection check before reviewing or enabling tools. A successful local or
 draft smoke is not evidence that the live broker credential, deployed route, or
 tool grant works.
 
+## Saves from two tabs or two people
+
+A page that saves records must stay correct when a second tab or a second
+person saved something after this page loaded. A stale tab once replaced a
+confirmed booking without a warning, because the app checked for overlaps
+against the list it had loaded and then wrote the whole list back.
+
+- Keep shared records in app tables. Edits carry `expectedVersion`, so a
+  stale edit gets 409 `row_version_conflict` instead of overwriting.
+- Rules that compare rows (no overlapping bookings, one open checkout per
+  item, a unique code) must check against data read at save time, never the
+  list the page loaded. In server code with `serverTables`, check and write
+  together: let a unique index refuse the duplicate where one fits (one open
+  checkout per item), or hold a lock on the room or item while you check and
+  insert (for example `pg_advisory_xact_lock` in the same transaction). A
+  plain check-then-insert can let two saves made at the same moment both
+  through. Report a refused save as a conflict naming the other record.
+- If the person asked for data kept only in the browser, re-read storage
+  right before every write, change only the affected entry instead of
+  writing a whole list back, and refresh on the `storage` event so other tabs
+  update.
+- Test it: open the page in two tabs, save conflicting entries in each, and
+  confirm the second save is refused and the first survives a reload.
+
 ## What the reviewer can check
 
 The validation reviewer checks each brief requirement against the page's
