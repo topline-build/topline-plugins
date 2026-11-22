@@ -360,7 +360,7 @@ only, never at build time:
 
 - Node: the platform installs a global; no import is needed.
   `const key = await globalThis.platformSecrets.get("crmApiKey");`
-  (`globalThis.platformSecrets.bindings()` lists the bound names).
+  (`globalThis.platformSecrets.bindings()` returns the bindings as `[{ name, env }]`; read `.name` for the bound names).
 - Python: `from platform_artifact_secrets import get_secret` then
   `get_secret("crmApiKey")`.
 
