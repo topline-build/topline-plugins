@@ -49,7 +49,12 @@ Contract details:
   header) only labels the row history. It never authorizes anything: your code
   decides who may change what.
 - A success is `200` with `{ ok: true, rows, rowCount, columns, warnings, ... }`.
-  Read `rows`; `rowCount` tells an `UPDATE` whether it matched. **Treat every
+  Read `rows`; `rowCount` tells an `UPDATE` whether it matched. A read
+  returns at most 500 rows unless the body sets `"maxRows"` (1 to 5000); when
+  more exist, or the result passes 1 MB, it has `truncated: true` (with a
+  `row_limit_truncated` or `byte_limit_truncated` warning), so check `truncated`, ask for more or page with
+  `LIMIT`/`OFFSET`, and never show a cut list as complete. The whole request
+  body is at most 256 KB, so send large batches in several calls. **Treat every
   value in `rows` as a string**: timestamps arrive as Postgres text such as
   `2026-11-16 21:10:14.04+00`, numbers as digit strings. Convert in code, or
   shape values in SQL (`to_char(col, 'YYYY-MM-DD')`,
@@ -64,6 +69,14 @@ Contract details:
 - Name tables as `company_data.<name>`. Prefer `date_part('epoch', col)` to
   `extract(epoch FROM col)`, which the statement checker currently misreads as
   a table reference.
+- Server table SQL runs as the app, not as the viewer, so your code is the only
+  thing that limits what each viewer sees. If you cache its results in server
+  memory, key the cache by everything that changes the answer: the viewer
+  (`x-platform-viewer-email`), anything your code looks up to decide access
+  (such as their role), and the request parameters. A cache
+  keyed only by the query serves one viewer's rows to the next. When every
+  viewer may see the same result, prefer a declared live dataset with
+  `cacheTtlSeconds` over a hand-rolled cache.
 - A draft may only read unless the manifest also sets `"previewWrites": true`,
   and then a draft writes **real rows** (there is no isolated preview data).
   A dev-sandbox preview gets no token, so the headers are absent there.
@@ -223,8 +236,12 @@ def notify(request, to, text, link=None):
         return json.loads(response.read())["results"]
 ```
 
-Batch table writes in a job: one `INSERT ... SELECT * FROM unnest(...)` or a
-multi-row `VALUES` per call, not one call per row. Table writes are limited per
+Batch table writes in a job: one `INSERT ... SELECT s, p FROM unnest(CAST(:skus AS text[]),
+CAST(:prices AS numeric[])) AS t(s, p)` or a multi-row `VALUES` per call, not one
+call per row (`unnest` and `generate_series` are the row generators allowed in
+`FROM`). An upsert may carry a `WHERE` on `DO UPDATE`; write the comparison as
+`a <> b` (with `coalesce` for nulls), since the statement checker can't read
+`IS DISTINCT FROM` there. Table writes are limited per
 minute, and a row-by-row job stops partway.
 
 ## Managed file storage
