@@ -401,6 +401,37 @@ only, never at build time:
 Both cache the value per function instance. Never return it to the browser or
 write it to a log.
 
+### Calling `/api/v1/pestroutes/connections` from the app (no key)
+
+Declare `"platformApis": ["pestroutes:connect"]` in the manifest (needs a
+server part). Server code then gets `x-platform-api-token` (a 10-minute token
+for this deployment) and `x-platform-api-origin` on every request it serves.
+There is no key to request, bind, store or rotate: don't call
+`platform_request_build_secret` for it. An account admin grants the scope the
+first time they save or deploy the app; a builder who isn't an admin gets
+`platform_api_admin_required` and should ask an admin to deploy once. Drafts
+get the token and make real calls.
+
+```js
+async function toplineApi(req, path, init = {}) {
+  const origin = req.headers["x-platform-api-origin"];
+  const token = req.headers["x-platform-api-token"];
+  if (!origin || !token) throw Object.assign(new Error("platform_api_unavailable"), { status: 503 });
+  return fetch(new URL(path, origin), {
+    ...init,
+    headers: { ...(init.headers ?? {}), "Authorization": `Bearer ${token}`, "Content-Type": "application/json" }
+  });
+}
+const res = await toplineApi(req, "/api/v1/pestroutes/connections", {
+  method: "POST",
+  body: JSON.stringify({ apiUrl, apiKey, apiToken, groupName, label })
+});
+```
+
+The connections it makes belong to the app. Never send the token, or the
+vendor's PestRoutes keys, to the browser, and never send an `Origin` header
+(Topline answers 403).
+
 ### Calling `/api/v1/pestroutes/connections` with an app key
 
 To add or manage a PestRoutes account from the app (the External API guide's
@@ -420,7 +451,8 @@ const res = await fetch(new URL("/api/v1/pestroutes/connections", origin), {
 ```
 
 `validate-local` accepts a quoted path starting `/api/v1/pestroutes/connections`
-only when the app has `secretBindings`, and, in an app with parts, only inside
+only when the app has `secretBindings` or declares `pestroutes:connect` in
+`platformApis`, and, in an app with parts, only inside
 a server part; a website part naming it is refused. Never send an `Origin`
 header (Topline answers 403) or pass the key or the PestRoutes keys to the browser.
 
