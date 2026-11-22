@@ -152,6 +152,8 @@ server part). Server code then gets `x-platform-notify-url` and
 runs. `POST` JSON `{ "to": "owner" | "<email>" | [...], "text": "...", "link"?: "https://..." }`
 with the token as a Bearer `Authorization` header.
 
+- Alerts are opt in. Send only the messages the person asked for; offer any
+  other alert (for example "also DM on Urgent?") instead of adding it.
 - The message goes as a Slack DM from the company's Topline Slack app, or by
   email when the person isn't on Slack. It ends with "Sent by <app> · Open app".
 - Only people who can open the app receive it; anyone else comes back as
@@ -159,6 +161,13 @@ with the token as a Bearer `Authorization` header.
   plain text, 200 messages a day per app and 20 a day per person.
 - A draft sends only to its owner, marked `[Test]`, so test the real wording on
   the draft. The live app sends to everyone named.
+- **An alert sent when a row is saved** ("DM me when a High complaint comes
+  in") can be tried on the draft too, even though a draft can't save rows. Add
+  an owner-only "Send a test alert" action that builds the same message from
+  sample values through the same function the save uses, and sends it. Offer
+  `previewWrites: true` (real rows from the draft) only when the person accepts
+  real test rows. Never tell the person they have to publish before they can
+  try the alert.
 - The answer is `{ ok: true, results: [{ to, status: "sent" | "skipped" | "failed", channel?, reason? }] }`.
   Report skipped and failed people in the app's own run log; never retry a
   `sent` one.
@@ -360,7 +369,7 @@ only, never at build time:
 
 - Node: the platform installs a global; no import is needed.
   `const key = await globalThis.platformSecrets.get("crmApiKey");`
-  (`globalThis.platformSecrets.bindings()` lists the bound names).
+  (`globalThis.platformSecrets.bindings()` returns the bindings as `[{ name, env }]`; read `.name` for the bound names).
 - Python: `from platform_artifact_secrets import get_secret` then
   `get_secret("crmApiKey")`.
 
