@@ -112,23 +112,31 @@ function denied(r, action) {
 // (ResourceNotFoundException for a log group that does not exist yet) are answers, not problems.
 const THROTTLED = ["ThrottlingException", "Throttling", "TooManyRequestsException", "RequestLimitExceeded"];
 
+// The runner's wait(ms) is a real timer; a runner without it gets a clock loop (it spins the script).
+async function pause(ms) {
+  if (!(ms > 0)) return;
+  if (typeof wait === "function") { await wait(ms); return; }
+  const until = Date.now() + ms;
+  while (Date.now() < until) { /* wait */ }
+}
+
 async function aws(service, operation, params, expected) {
   callsMade += 1;
-  const send = () => {
+  const send = async () => {
     if (service === "cloudtrail") {
       // Pace CloudTrail so its 2-a-second limit doesn't spend the call budget on throttles.
-      const until = lastTrailCallAt + 550;
-      while (Date.now() < until) { /* wait */ }
-      lastTrailCallAt = Date.now();
+      // The slot is taken before waiting, so calls running at the same time queue behind each other.
+      const slot = Math.max(Date.now(), lastTrailCallAt + 550);
+      lastTrailCallAt = slot;
+      await pause(slot - Date.now());
     }
     return call_aws(service, operation, REGION, params || {});
   };
   let r = await send();
   // CloudTrail LookupEvents allows about 2 calls a second: back off and retry a throttled read
-  // (no timers in the runner, so wait on the clock; at most ~1.75 s in all).
+  // (at most ~1.75 s in all).
   for (let attempt = 0; attempt < 3 && r && r.ok === false && THROTTLED.indexOf(r.errorCode) !== -1; attempt += 1) {
-    const until = Date.now() + 250 * Math.pow(2, attempt);
-    while (Date.now() < until) { /* wait */ }
+    await pause(250 * Math.pow(2, attempt));
     callsMade += 1;
     r = await send();
   }
