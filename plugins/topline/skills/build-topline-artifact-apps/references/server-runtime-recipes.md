@@ -244,6 +244,14 @@ call per row (`unnest` and `generate_series` are the row generators allowed in
 `IS DISTINCT FROM` there. Table writes are limited per
 minute, and a row-by-row job stops partway.
 
+Server table SQL limits, per minute: each caller gets 60 writes and 600 reads,
+and the whole app gets 600 writes and 6,000 reads. The caller is whoever the
+request was for: the signed-in viewer, or a public page visitor's address. A
+webhook, scheduled job or MCP tool call counts only against the app's budget. Send the `x-platform-tables-token` from the request you are serving;
+a token kept from an earlier request bills that earlier caller. Past a limit
+the call answers 429 `company_table_rate_limited`: tell the visitor to retry,
+and never count it as a failed lookup (a lockout counter must not trip on it).
+
 ## Managed file storage
 
 Declare `storageBindings: [{ "name": "files", "access": "read_write" }]` (or
