@@ -77,9 +77,12 @@ create table company_data.quote_leads (
   message text,
   stage text not null default 'new',
   source_ip text,
-  owner_email text
+  owner_email text,
+  dedupe_key text unique
 )
 ```
+
+Document `dedupe_key` too ("Email plus ten-minute bucket; blocks repeat submits").
 
 ## The public submit route
 
@@ -94,17 +97,21 @@ create table company_data.quote_leads (
    key through the secret request flow and bind it with `secretBindings`;
    never put it in source. The site key in `quote.html` is public.
 4. Validate fields; trim, cap lengths, require a plausible email.
-5. Duplicate check in the same SQL: skip the insert when the same email sent a
-   lead in the last ten minutes.
+5. Duplicate check the database enforces: give `quote_leads` a
+   `dedupe_key text unique` column, fill it with the email and the current
+   ten-minute bucket (fixed buckets, so two submits either side of a bucket
+   edge both save), and let a repeat do nothing. A `where not exists (...)`
+   check races: twenty identical submits at once saved three rows in a test,
+   while the unique key saved one.
 
 ```js
+const windowStart = Math.floor(Date.now() / 600_000); // ten-minute buckets
 await tablesSql(req,
-  `insert into company_data.quote_leads (name, email, phone, address, service, message, source_ip)
-   select :name, :email, :phone, :address, :service, :message, :ip
-   where not exists (
-     select 1 from company_data.quote_leads
-     where lower(email) = lower(:email) and _created_at > now() - interval '10 minutes')`,
-  { ...fields, ip: req.headers["x-platform-client-ip"] ?? null },
+  `insert into company_data.quote_leads (name, email, phone, address, service, message, source_ip, dedupe_key)
+   values (:name, :email, :phone, :address, :service, :message, :ip, :dedupeKey)
+   on conflict (dedupe_key) do nothing`,
+  { ...fields, ip: req.headers["x-platform-client-ip"] ?? null,
+    dedupeKey: `${fields.email.toLowerCase()}:${windowStart}` },
   "public-quote-form");
 ```
 
