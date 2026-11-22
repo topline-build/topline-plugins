@@ -27,7 +27,7 @@ Read [Data freshness and materialization](references/data-freshness-and-material
 
 - Use bounded live SQL plus a nonzero cache TTL for ordinary read-heavy dashboards.
 - Use `refresh_live_cache` to warm live caches or recompute `mode: "precomputed"` datasets without creating an artifact revision.
-- When `platform_capability_status` shows `families.appMessaging` available, an app can message people in Slack or by email (`notify`) and run one of its own routes on a schedule (`mode: "call_route"`). See [Message people and run on a schedule](references/server-runtime-recipes.md#message-people-and-run-on-a-schedule).
+- When `platform_capability_status` shows `families.appMessaging` available (in a Topline coding task: when your instructions say app messaging is on), an app can message people in Slack or by email (`notify`) and run one of its own routes on a schedule (`mode: "call_route"`). See [Message people and run on a schedule](references/server-runtime-recipes.md#message-people-and-run-on-a-schedule).
 - Let the platform worker store precomputed results as private tenant-scoped JSON in platform object storage. Keep browser reads on relative declared `/_artifact/data/*` routes.
 - Keep reusable ingestion and transformation in connector-owned or pipeline-owned materialized tables or views. An artifact app's schedule does not become an arbitrary ETL engine; recurring ingestion is scheduled through the source's data pipeline artifact.
 - Use `precompute_static` only when the intended output is a new static artifact revision.
