@@ -142,7 +142,8 @@ queue backed by an app-owned approvers table, and no `tables[]`.
 ## Message people and run on a schedule
 
 Only when `platform_capability_status` shows `families.appMessaging` as
-`available`. Otherwise these headers never arrive and a `call_route` schedule
+`available` (in a Topline coding task: when your instructions say app
+messaging is on). Otherwise these headers never arrive and a `call_route` schedule
 skips every run: say so, and build the page without them.
 
 **Message people (`notify`).** Declare `"notify": { "enabled": true }` (needs a
@@ -164,7 +165,8 @@ with the token as a Bearer `Authorization` header.
 
 **Run on a schedule (`call_route`).** Add a `refreshSchedules[]` entry with
 `"mode": "call_route"` and `"route"` naming one of the app's own `api` routes,
-for example `/_artifact/jobs/morning-digest`. It runs only on the published
+for example `/_artifact/jobs/morning-digest`, plus the usual `name`, `cron`,
+`timezone` and a one-line `promptText` saying what the job does. It runs only on the published
 app (a draft's schedule waits until publish), as a `POST` with no viewer:
 `x-platform-artifact-access: system` and `x-platform-scheduled: <schedule name>`.
 The route gets the same table, notify and events headers as any request, and
