@@ -72,6 +72,10 @@ async function and `return`s its answer; `console.log` is captured.
   CloudTrail `DeleteSecurityGroup` event, not a `DescribeSecurityGroups` error.
   Topline's own account (hosted services, `/topline/dev/hosted-*` logs) is not
   reachable; that is staff work.
+- **CloudTrail:** `LookupEvents` takes `StartTime`/`EndTime` as epoch seconds
+  (an ISO string is rejected). The runner's own `AssumeRole` into
+  `<prefix>-agent-read` is logged in this company's region, not us-east-1;
+  only IAM changes (CreateRole, PutRolePolicy) land in us-east-1.
 - **Writes:** refused with `write_blocked` before any AWS client exists.
 - **`appId`:** narrows Lambda and log reads to one app's functions and log
   groups; S3 object reads need it (`s3_requires_app_scope` without). Leave it

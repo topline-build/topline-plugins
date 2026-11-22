@@ -210,9 +210,9 @@ async function serviceNames(clusterName, prefix) {
 async function drift(clusterName, names) {
   const out = [];
   if (!names.length) return out;
-  const r = await aws("ecs", "DescribeServices", { cluster: clusterName, services: names.slice(0, 10) });
-  if (failed(r)) return [{ error: r.errorCode }];
-  for (const svc of r.services || []) {
+  const r = await describeServices(clusterName, names.slice(0, 10));
+  if (r.error && !r.services.length && !r.failures.length) return [{ error: r.error }];
+  for (const svc of r.services) {
     const running = String(svc.taskDefinition || "");
     const family = running.split("/").pop().split(":")[0];
     const newest = await aws("ecs", "ListTaskDefinitions", { familyPrefix: family, sort: "DESC", maxResults: 1 });
@@ -226,7 +226,42 @@ async function drift(clusterName, names) {
       lastEvent: (svc.events || [])[0] ? { at: String(svc.events[0].createdAt), message: short(svc.events[0].message, 200) } : null
     });
   }
-  for (const f of r.failures || []) out.push({ service: String(f.arn || "").split("/").pop(), error: f.reason });
+  for (const f of r.failures) out.push({ service: String(f.arn || "").split("/").pop(), error: f.reason });
+  return out;
+}
+
+// DescribeServices, never counting from a $truncated result: a page the runner trimmed keeps the
+// services that fit and the rest are asked for again; a text preview (no services list) is retried
+// one service at a time. A single service still over the cap is a problem, never "no services".
+async function describeServices(clusterName, names) {
+  const out = { services: [], failures: [], error: null };
+  let pending = names.slice();
+  let batch = pending.length;
+  while (pending.length && budgetLeft()) {
+    const ask = pending.slice(0, batch);
+    const r = await aws("ecs", "DescribeServices", { cluster: clusterName, services: ask });
+    if (failed(r)) { out.error = r.errorCode; break; }
+    const got = Array.isArray(r.services) ? r.services : [];
+    for (const f of r.failures || []) out.failures.push(f);
+    if (r.$truncated && !got.length) {
+      if (ask.length > 1) { batch = 1; continue; }
+      problems.push({ call: "ecs:DescribeServices", errorCode: "item_over_output_cap", message: "Service " + ask[0] + " is larger than the runner's per-call output cap, so it is not in this report." });
+      out.failures.push({ arn: ask[0], reason: "item_over_output_cap" });
+      pending = pending.slice(1);
+      continue;
+    }
+    for (const svc of got) out.services.push(svc);
+    if (!r.$truncated) { pending = pending.slice(ask.length); continue; }
+    // Drop exactly the names answered (as a service or a failure), by name or ARN, never by count.
+    const answered = new Set();
+    for (const svc of got) { answered.add(svc.serviceName); answered.add(String(svc.serviceArn || "").split("/").pop()); }
+    for (const f of r.failures || []) answered.add(String(f.arn || "").split("/").pop());
+    pending = pending.filter((name) => !answered.has(String(name).split("/").pop()));
+  }
+  if (pending.length) {
+    if (!out.error) out.error = "script_budget";
+    notChecked.push({ action: "ecs:DescribeServices", errorCode: out.error, message: "Not described: " + pending.join(", ") + "." });
+  }
   return out;
 }
 
