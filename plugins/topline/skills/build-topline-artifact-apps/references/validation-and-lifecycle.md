@@ -127,8 +127,13 @@ against the list it had loaded and then wrote the whole list back.
   right before every write, change only the affected entry instead of
   writing a whole list back, and refresh on the `storage` event so other tabs
   update.
+- After a refused save, re-read the saved data and redraw everything that
+  depended on it: previews, counts, row results and enabled buttons. A stale
+  tab once refused a duplicate import correctly but still showed the row as
+  "Will import" with Commit enabled and the old saved count.
 - Test it: open the page in two tabs, save conflicting entries in each, and
-  confirm the second save is refused and the first survives a reload.
+  confirm the second save is refused, its screen updates to show why, and the
+  first survives a reload.
 
 ## What the reviewer can check
 
