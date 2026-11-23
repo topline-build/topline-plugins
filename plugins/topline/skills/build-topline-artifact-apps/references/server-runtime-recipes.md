@@ -21,7 +21,10 @@ freely; never set, rename, retype or drop them, and never name them in
 
 There is **no `_id` column**: a statement that names `_id` fails with
 `company_table_sql_failed:42703` (undefined column). Filter out soft-deleted
-rows with `_deleted_at is null`. There are no sequences: for a human-friendly
+rows with `_deleted_at is null`. Server table SQL can't set the `_` columns,
+so a SQL `DELETE` removes the row for good (no restore); only the browser
+table route's `delete` is a soft delete. For an undoable remove from server
+code, keep your own `archived` or `status` column and filter on it. There are no sequences: for a human-friendly
 number, show part of `_row_id` or keep your own column; `max()+1` races.
 
 ## Server table SQL
@@ -53,7 +56,10 @@ Contract details:
   returns at most 500 rows unless the body sets `"maxRows"` (1 to 5000); when
   more exist, or the result passes 1 MB, it has `truncated: true` (with a
   `row_limit_truncated` or `byte_limit_truncated` warning), so check `truncated`, ask for more or page with
-  `LIMIT`/`OFFSET`, and never show a cut list as complete. The whole request
+  `LIMIT`/`OFFSET`, and never show a cut list as complete. A statement has 15
+  seconds: a large read over a joined view can run out before 5000 rows, so
+  page it (`ORDER BY` a key, `WHERE key > :last`, `LIMIT 2000`) instead of
+  asking for everything at once. The whole request
   body is at most 256 KB, so send large batches in several calls. **Treat every
   value in `rows` as a string**: timestamps arrive as Postgres text such as
   `2026-11-16 21:10:14.04+00`, numbers as digit strings. Convert in code, or
