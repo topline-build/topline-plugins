@@ -59,7 +59,10 @@ pipeline board, the dispatch view). Mark only those routes public:
 - `audience` defaults to `"viewers"`: everyone the app is shared with, as
   before. `"public"` is anyone on the internet, on the **live** app only.
   Drafts and versions stay members-only; check public pages before publishing
-  with the anonymous smoke when it is offered.
+  with the anonymous smoke when it is offered. The one exception: a webhook
+  route with `webhook.verify` also answers anonymous callers on the latest
+  draft (`/draft/`), because the adapter refuses any call without a valid
+  signature before your handler runs.
 - Platform routes (`/_artifact/data|tables|knowledge|secrets|pipeline/*`,
   `/_artifact/me`, `/_artifact/mcp`) are never public, and a public `/*` never
   covers anything under `/_artifact/`: mark each public api route on its own
