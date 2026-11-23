@@ -59,7 +59,11 @@ Contract details:
   `LIMIT`/`OFFSET`, and never show a cut list as complete. A statement has 15
   seconds: a large read over a joined view can run out before 5000 rows, so
   page it (`ORDER BY` a key, `WHERE key > :last`, `LIMIT 2000`) instead of
-  asking for everything at once. The whole request
+  asking for everything at once. Paging only helps when each page is cheap: the
+  page key should match the filter (page a date-range report by the date column,
+  `WHERE visit_date >= :start_date AND (visit_date, id) > (:last_date, :last_id)`),
+  and a range wide enough that one page must scan most of a joined view still
+  runs out; split it into smaller ranges (a month per call) instead. The whole request
   body is at most 256 KB, so send large batches in several calls. **Treat every
   value in `rows` as a string**: timestamps arrive as Postgres text such as
   `2026-11-16 21:10:14.04+00`, numbers as digit strings. Convert in code, or
@@ -202,6 +206,12 @@ the app's normal route time limit: 30 seconds unless `resources.timeoutSeconds`
 in `artifact-app.json` raises it (up to the company's limit, 120 seconds by default).
 A route that runs past it is stopped and answers `504 artifact_app_route_timeout`,
 so a long job should save progress as it goes and pick up where it stopped.
+When the app (or every app in the company) is already running as many calls at once as it may, a call answers
+`429 artifact_app_busy` with `Retry-After` and `retryAfterSeconds`: wait that
+long and try again, and cap parallel calls (about 5 at once) in a batch.
+While a draft redeploys, its `/draft/` address answers 404 until the new
+version is up (often about a minute), so a test caller should retry 404s
+for a couple of minutes after a deploy instead of failing.
 Answer 2xx when the job finished. Any other
 answer, or running out of time, fails the run, shows on the app's problems,
 and is **not retried**, so make the job safe to run twice (dedupe on the day
