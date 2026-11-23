@@ -74,8 +74,9 @@ Contract details:
   (`42703` is an unknown column, `42P01` an unknown table);
   `company_table_not_found` means the `company_data.<name>` relation isn't a
   registered table; `preview_writes_not_allowed` means a draft tried to write
-  (see below); `server_tables_not_declared` means the manifest lacks
-  `serverTables: true`.
+  (see below); `server_tables_not_declared` means the manifest has no
+  `serverTables`; `403 table_structure_locked` (with a `reason`) means the
+  table's structure is locked on the Data page (rows still change).
 - Name tables as `company_data.<name>`. Prefer `date_part('epoch', col)` to
   `extract(epoch FROM col)`, which the statement checker currently misreads as
   a table reference.
@@ -91,9 +92,24 @@ Contract details:
   and then a draft writes **real rows** (there is no isolated preview data).
   A dev-sandbox preview gets no token, so the headers are absent there.
 
+### Narrow server SQL to the tables the app uses
+
+`serverTables: true` reaches every company table the author can. To limit
+the app, list tables instead:
+
+```json
+{ "serverTables": ["jobs:read", "job_notes:write"] }
+```
+
+`name:read` reads `company_data.<name>` (or `source_<group>.<table>`);
+`:write` also changes rows, columns and indexes (company tables only). A
+statement touching anything else gets `403 server_table_not_declared`, whose
+`reason` names the entry to add. `platform_artifact_status` lists the tables
+the app's server code changed lately (`serverTableWrites`).
+
 ### Server-only apps do not declare `tables[]`
 
-`serverTables: true` is enough for server SQL; a deploy without `tables[]`
+`serverTables` (true or a list) is enough for server SQL; a deploy without `tables[]`
 works. Do **not** add a `tables[]` binding just to "register" a table: every
 binding exposes `./_artifact/tables/<alias>` to every viewer of the app, and a
 `list` binding returns every row's `_row_id`, `_version` and the binding's

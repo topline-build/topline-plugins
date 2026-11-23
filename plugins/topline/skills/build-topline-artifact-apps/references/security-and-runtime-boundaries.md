@@ -156,7 +156,8 @@ Keep company data in tables: records people add or edit in an app, or
 that another app may use. For browser reads and saves, declare them in manifest
 `tables[]`; the platform serves those routes and builds every SQL statement,
 and their saves work only on the live app on its own origin. The app's own
-server code may instead run table SQL as the app (manifest `serverTables: true`)
+server code may instead run table SQL as the app (manifest `serverTables: true`,
+or a list such as `["jobs:read", "job_notes:write"]` that limits it to those tables)
 by POSTing to the URL in the `x-platform-tables-sql-url` request header with
 the `x-platform-tables-token` it is given as a bearer token;
 the app's own sign-in and logic then decide who may change what, and the
