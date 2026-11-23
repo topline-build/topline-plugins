@@ -12,6 +12,7 @@ the Build MCP, use the matching starter from [Build MCP starters](#build-mcp-sta
 | Dashboard with joins, derived metrics, or multiple read-only relations | `multi-source-dashboard` | Bounded live SQL datasets; prototype with catalog tools and `run_psql`. |
 | Private operational action surface | `internal-tool` | Keep private UI and any server work scoped to declared artifact routes. |
 | Records people add or edit | `table-editor` | Manifest `tables[]` over tables; saves work only on the live app. See `examples/replace-a-spreadsheet/EXAMPLE.md`. |
+| Chatbot or question box whose answers include charts or tables | `chat-assistant` | Wire `src/data.js` to a bounded read of the real numbers; the vendored A2UI kit draws the cards. See `examples/chat-result-cards/EXAMPLE.md`. |
 | Private API-first tool | `python-api` | Declare `/_artifact/api/*`; keep viewer auth and external calls server-side. |
 | Page that only reads platform routes, with no backend of its own | Static-only `parts` | One `static` part and no server part; no machine runs for it. See "One app, several parts". |
 | Website or app with its own backend API (two parts, possibly two languages) | `web-and-api` | One artifact with `parts`: a static website part and a server API part, routed by path under one address. |
@@ -41,6 +42,7 @@ instead, and read the recipe its `pluginPath` names:
 | `python-api` | `private-api-first-app` or `bounded-bedrock-assistant` scaffold Node; for Python, add a Python server part yourself (see [Server runtime recipes](server-runtime-recipes.md#python-server-parts)) |
 | `viewer-scoped-dashboard` | `viewer-scoped-customer-portal` |
 | `web-and-api` | `shape: "web-and-api"` (no starter) |
+| `chat-assistant` | `starter: "chat-assistant"` (Build MCP 0.9.22 or later): the whole template, with the app id and title filled in |
 | `artifact-draft` | No starter |
 
 A starter is available only when the tool's `starter` list names it; on an
