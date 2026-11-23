@@ -111,11 +111,23 @@ function Answer({ reply }) {
 
 esbuild writes the imported CSS next to the JS bundle. The template's build
 inlines it into the page and fails when the card styles are missing; in
-another app, link or inline that CSS file, or the cards draw with no bars. The cards use the customer's ProductUI
-`--storyboard-*` tokens when the page also loads the vendored design-system
-`tokens.css` (copy and link it the way `connector-app`'s `build.mjs` does);
-without it they use neutral fallbacks. Restyle with your own rules after
+another app, link or inline that CSS file, or the cards draw with no bars.
+
+The cards and the template page use the customer's ProductUI `--storyboard-*`
+tokens. When init-app copied the account's design system into
+`src/design-system/`, the template's build inlines its `tokens.css`, so the
+chatbot carries the customer's brand with no extra step; without it the page
+uses neutral fallbacks. In another app, copy and link `tokens.css` the way
+`connector-app`'s `build.mjs` does. Restyle with your own rules after
 `result-cards.css`, never by editing it.
+
+When `src/design-system/components/ProductUI.tsx` exports `ChatThread`,
+`ChatMessage` and `ChatComposer` (design systems created from the current
+template do), build the page from them: `ChatThread` holds the turns,
+`ChatMessage from="assistant"` wraps `<ResultCards>` and the answer text, and
+`ChatComposer` replaces the hand-written form. Their `Components/Chat` stories
+show each state. Keep drawing answers with the kit's `ResultCards`, not the
+design system's `ResultCard`, which is for answers your own code lays out.
 
 ## Validation and controls
 
