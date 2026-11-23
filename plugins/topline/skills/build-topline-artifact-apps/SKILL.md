@@ -47,6 +47,7 @@ Read [Security and runtime boundaries](references/security-and-runtime-boundarie
 - The other machine ingress is a live validated `kind: "mcp_server"` app at exact `/_artifact/mcp`, authenticated by a platform-managed bearer that artifact code never receives. MCP server apps can't have webhook routes.
 - For an MCP server, use `fastmcp-server`, keep FastMCP 3.4.7 hash-locked with stateless JSON Streamable HTTP, and leave connection, tool review, coding/chat enablement, and agent assignment to Developer Access. MCP artifacts cannot currently declare `sourceBindings`, `datasets`, or refresh schedules because machine ingress cannot authorize artifact-data callbacks; use approved secret-bound external APIs or platform-service work instead.
 - Keep simple artifact chat to one bounded server-side Bedrock `Converse` call unless the operator explicitly requests a larger supported architecture.
+- When the person asks for a chatbot or question box whose answers include charts or tables, open [Chatbot that answers with charts](examples/chat-result-cards/EXAMPLE.md) and use the vendored A2UI results kit: the one reviewed exception to a single Converse call, with one display tool, `show_result`, checked on the server and drawn by `ResultCards`. Do not hand-write chart components for chat answers.
 
 ## Build from maintained sources
 

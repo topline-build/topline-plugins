@@ -91,4 +91,4 @@ The helper assumes the model-scoped Topline production role and refreshes its in
 
 ## Limitations and graduation boundary
 
-This is one bounded completion. Multi-turn memory, retrieval, tools, streaming, model selection, cross-user history, or autonomous execution requires explicit privacy, cost, and platform-service review.
+This is one bounded completion. Multi-turn memory, retrieval, tools, streaming, model selection, cross-user history, or autonomous execution requires explicit privacy, cost, and platform-service review. The one reviewed exception is answers drawn as chart and table cards: see [Chatbot that answers with charts](../chat-result-cards/EXAMPLE.md).

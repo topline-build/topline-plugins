@@ -20,6 +20,7 @@ draft-only lifecycle in `validation-and-lifecycle.md`.
 | FastMCP server | `fastmcp-server` | Live-only exact MCP ingress, platform-owned credential, and customer-managed tool review for chat/coding. |
 | `notify-via-slack-or-email` | `python-api` + a requested key | Alerts through the customer's own Slack webhook or email provider; the key arrives through `platform_request_build_secret`, sends happen in server routes or schedules only, and a failed send is visible app state. |
 | `bounded-bedrock-assistant` | `python-api` | Private route, one bounded Bedrock Converse call, no agentic extras. |
+| `chat-result-cards` | `chat-assistant` (vendored `src/vendor/a2ui-results/`) | Chatbot answers drawn as A2UI chart and table cards: one display tool `show_result`, checked on the server with one retry, at most 3 Converse calls, display-only cards. |
 | `knowledge-base-backed-app` | `react-dashboard` + an exact published Knowledge Base grant | Normal artifact reads one approved live release through relative `/_artifact/knowledge/*` broker routes; no token, provider ID, or direct public endpoint. |
 | `webhook-receiver` | Node server + `serverTables` + a webhook route | A public `api` route with a `webhook` block: provider headers pass, Topline checks the HMAC signature before the handler, a unique delivery ID dedupes, 2xx quickly, signed local samples, the URL handed to the person after publish. |
 | `signed-webhook-boundary` | Points to `webhook-receiver` | What still needs a platform service: queueing, replay, non-HMAC signature schemes, MCP server apps. |
