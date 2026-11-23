@@ -164,8 +164,12 @@ in Topline first, then in the provider.
 
 ## Test with signed samples before publishing
 
-Drafts are members-only, so a provider can't reach one. Test locally with the
-platform's own check:
+A route with `verify` also answers anonymous callers on the latest draft, at
+its `/draft/` address, so you can point a provider's test mode (or your own
+signed sender) at the draft before publishing; a call without a valid
+signature gets 401 from the adapter. Every other draft route, and a webhook
+without `verify`, stays members-only. Test locally first with the platform's
+own check:
 
 ```sh
 node scripts/artifacts/webhook-sample --dir <appDir> --route /_artifact/api/hooks/forms --body samples/lead.json
