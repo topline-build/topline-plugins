@@ -198,7 +198,11 @@ for example `/_artifact/jobs/morning-digest`, plus the usual `name`, `cron`,
 app (a draft's schedule waits until publish), as a `POST` with no viewer:
 `x-platform-artifact-access: system` and `x-platform-scheduled: <schedule name>`.
 The route gets the same table, notify and events headers as any request, and
-the app's normal route time limit. Answer 2xx when the job finished. Any other
+the app's normal route time limit: 30 seconds unless `resources.timeoutSeconds`
+in `artifact-app.json` raises it (up to the company's limit, 120 seconds by default).
+A route that runs past it is stopped and answers `504 artifact_app_route_timeout`,
+so a long job should save progress as it goes and pick up where it stopped.
+Answer 2xx when the job finished. Any other
 answer, or running out of time, fails the run, shows on the app's problems,
 and is **not retried**, so make the job safe to run twice (dedupe on the day
 in a run-log table). To try the job on a draft, call the same route yourself.
