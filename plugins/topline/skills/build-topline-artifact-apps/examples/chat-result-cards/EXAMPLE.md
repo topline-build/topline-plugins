@@ -55,12 +55,13 @@ other tool, model-run query or memory still needs review.
   server table SQL or a declared source) and puts them in the system prompt as
   compact JSON or a small table. The model only arranges numbers it was given.
 - The server calls `answerWithResults` from `tool.js` with its own `converse`
-  function. That turn offers one tool, `show_result`, checks each call with
-  `parseResultMessages`, sends every problem back once for a fix, and drops the
-  cards (answer in words) if the retry fails. It never makes more than 3 model
-  calls.
-- The route returns `{ text, result: { messages } | null, truncated }`. Return
-  the A2UI messages unchanged; the page checks them again before drawing.
+  function. Its one tool, `show_result`, takes flat cards (`{type: "bar",
+  title, rows: [{label, value}]}` and so on), easy for small models. The kit
+  builds and checks the A2UI messages, sends problems back once, then answers
+  in words with only numbers from the data. At most 3 model calls.
+- The route returns `{ text, result: { messages } | null, truncated, modelCalls }`
+  and logs the call count. Return the messages unchanged; the page checks them
+  again.
 - No other tools, no memory beyond the capped history, no streaming, no
   caller-supplied model or prompt.
 
