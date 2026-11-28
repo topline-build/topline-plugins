@@ -51,17 +51,14 @@ other tool, model-run query or memory still needs review.
   text only, at most 6 turns of 4,000 characters, starting with `user`,
   alternating roles, ending with `assistant` (drop anything else). Cards are
   never sent back, and history never carries data.
-- The server loads the numbers the answer needs (a bounded live SQL dataset,
-  server table SQL or a declared source) and puts them in the system prompt as
-  compact JSON or a small table. The model only arranges numbers it was given.
-- The server calls `answerWithResults` from `tool.js` with its own `converse`
-  function. Its one tool, `show_result`, takes flat cards (`{type: "bar",
-  title, rows: [{label, value}]}` and so on), easy for small models. The kit
-  builds and checks the A2UI messages, sends problems back once, then answers
-  in words with only numbers from the data. At most 3 model calls.
+- The server loads plain rows (a bounded live SQL dataset, server table SQL
+  or a declared source) and passes them as `data`.
+- `answerWithResults` from `tool.js` forces its one tool, `show_result`:
+  `answer` (words) plus optional flat cards that name a column and a measure
+  (`{type: "bar", by: "branch", count: true}`). The kit counts in code and
+  sends back any answer number not in the cards or data. At most 3 calls.
 - The route returns `{ text, result: { messages } | null, truncated, modelCalls }`
-  and logs the call count. Return the messages unchanged; the page checks them
-  again.
+  and logs the call count. Return the messages unchanged.
 - No other tools, no memory beyond the capped history, no streaming, no
   caller-supplied model or prompt.
 
@@ -80,8 +77,9 @@ const reply = await answerWithResults({
     new ConverseCommand({ modelId: process.env.PLATFORM_ARTIFACT_BEDROCK_MODEL_ID, ...params }),
     { abortSignal: AbortSignal.timeout(36_000) }
   ),
-  system: `You answer office managers' questions about this month's jobs.\nData (JSON): ${JSON.stringify(rows)}`,
-  messages: [...history, { role: "user", content: [{ text: question }] }]
+  system: "You answer office managers' questions about this month's jobs.",
+  messages: [...history, { role: "user", content: [{ text: question }] }],
+  data: rows
 });
 return json(200, { text: reply.text, result: reply.result, truncated: reply.truncated });
 ```
@@ -132,10 +130,9 @@ design system's `ResultCard`, which is for answers your own code lays out.
 
 ## Validation and controls
 
-- Stub `converse` in local checks (it is a plain function): a good
-  `show_result` call returns cards in 2 calls; a bad one is retried once with
-  the problems; two bad calls return `result: null` with words; never more
-  than 3 calls; no session means 401 and zero calls.
+- Stub `converse` in local checks: a good `show_result` call is 1 call with
+  counted cards; made-up numbers are retried once; never more than 3 calls;
+  no session means 401 and zero calls.
 - The template's `src/check.mjs` checks that the page uses the relative route
   and `ResultCards`, and that the built page carries the card styles; keep
   those checks in another app too.
